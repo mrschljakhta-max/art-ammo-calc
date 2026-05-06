@@ -3,14 +3,16 @@ const exportExcelBtn = document.getElementById("exportExcelBtn");
 exportExcelBtn.addEventListener("click", exportAnalysisToExcel);
 
 function exportAnalysisToExcel() {
-  const items = window.ArtAmmoState?.unitItems || [];
-  const grouped = window.ArtAmmoState?.groupedByUnit || {};
+  const items = typeof getCurrentFilteredItems === "function"
+    ? getCurrentFilteredItems()
+    : (window.ArtAmmoState?.unitItems || []);
 
   if (!items.length) {
     alert("Немає даних для експорту. Спочатку натисни «Аналізувати файл».");
     return;
   }
 
+  const grouped = groupByUnit(items);
   const workbook = XLSX.utils.book_new();
 
   const summaryRows = Object.values(grouped).map(unit => ({
