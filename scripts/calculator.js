@@ -34,6 +34,10 @@ function analyzeWorkbook() {
 
   });
 
+  window.ArtAmmoState.analysisItems = result;
+
+  document.getElementById("exportExcelBtn").disabled = false;
+
   renderAnalysis(result);
 
 }
