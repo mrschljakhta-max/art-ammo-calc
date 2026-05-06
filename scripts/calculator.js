@@ -4,10 +4,12 @@ const analysisPanel = document.getElementById("analysisPanel");
 const filtersPanel = document.getElementById("filtersPanel");
 const unitFilter = document.getElementById("unitFilter");
 const longRangeOnly = document.getElementById("longRangeOnly");
+const searchFilter = document.getElementById("searchFilter");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
 longRangeOnly.addEventListener("change", applyFilters);
+searchFilter.addEventListener("input", applyFilters);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -194,6 +196,8 @@ function groupByUnit(items) {
 }
 
 function setupFilters(grouped) {
+  const previousUnit = unitFilter.value || "all";
+
   unitFilter.innerHTML = `<option value="all">Всі підрозділи</option>`;
 
   Object.keys(grouped).forEach(unitName => {
@@ -203,10 +207,26 @@ function setupFilters(grouped) {
     unitFilter.appendChild(option);
   });
 
+  if ([...unitFilter.options].some(option => option.value === previousUnit)) {
+    unitFilter.value = previousUnit;
+  }
+
   filtersPanel.hidden = false;
 }
 
 function applyFilters() {
+  const filtered = getCurrentFilteredItems();
+  const grouped = groupByUnit(filtered);
+
+  renderAnalysis(
+    filtered,
+    filtered,
+    [],
+    grouped
+  );
+}
+
+function getCurrentFilteredItems() {
   const items = window.ArtAmmoState?.unitItems || [];
 
   let filtered = [...items];
@@ -219,14 +239,18 @@ function applyFilters() {
     filtered = filtered.filter(item => item.longRange);
   }
 
-  const grouped = groupByUnit(filtered);
+  const searchValue = searchFilter.value.trim().toLowerCase();
 
-  renderAnalysis(
-    filtered,
-    filtered,
-    [],
-    grouped
-  );
+  if (searchValue) {
+    filtered = filtered.filter(item =>
+      String(item.unit).toLowerCase().includes(searchValue) ||
+      String(item.projectile).toLowerCase().includes(searchValue) ||
+      String(item.charge).toLowerCase().includes(searchValue) ||
+      String(item.category).toLowerCase().includes(searchValue)
+    );
+  }
+
+  return filtered;
 }
 
 function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
@@ -284,39 +308,45 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
       </div>
 
     </div>
+  `;
 
-    <div class="table-panel analysis-table">
-      <h2>Контрольна звірка</h2>
+  if (summaryItems && summaryItems.length) {
+    html += `
+      <div class="table-panel analysis-table">
+        <h2>Контрольна звірка</h2>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Показник</th>
-              <th>Значення</th>
-            </tr>
-          </thead>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Показник</th>
+                <th>Значення</th>
+              </tr>
+            </thead>
 
-          <tbody>
-            <tr>
-              <td>Залишок по аркушах підрозділів</td>
-              <td>${unitTotalBalance}</td>
-            </tr>
+            <tbody>
+              <tr>
+                <td>Залишок по аркушах підрозділів</td>
+                <td>${unitTotalBalance}</td>
+              </tr>
 
-            <tr>
-              <td>Залишок по зведеному аркушу ${ART_AMMO_SCHEMA.SUMMARY_SHEET_NAME}</td>
-              <td>${summaryTotalBalance}</td>
-            </tr>
+              <tr>
+                <td>Залишок по зведеному аркушу ${ART_AMMO_SCHEMA.SUMMARY_SHEET_NAME}</td>
+                <td>${summaryTotalBalance}</td>
+              </tr>
 
-            <tr>
-              <td>Різниця</td>
-              <td>${unitTotalBalance - summaryTotalBalance}</td>
-            </tr>
-          </tbody>
-        </table>
+              <tr>
+                <td>Різниця</td>
+                <td>${unitTotalBalance - summaryTotalBalance}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    `;
+  }
 
+  html += `
     <div class="table-panel analysis-table">
       <h2>Підсумок по підрозділах</h2>
 
@@ -407,21 +437,4 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   `;
 
   analysisPanel.innerHTML = html;
-}
-
-
-function getCurrentFilteredItems() {
-  const items = window.ArtAmmoState?.unitItems || [];
-
-  let filtered = [...items];
-
-  if (unitFilter.value !== "all") {
-    filtered = filtered.filter(item => item.unit === unitFilter.value);
-  }
-
-  if (longRangeOnly.checked) {
-    filtered = filtered.filter(item => item.longRange);
-  }
-
-  return filtered;
 }
