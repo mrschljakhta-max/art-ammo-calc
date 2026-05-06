@@ -1,1 +1,44 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
+  <title>Art Ammo</title>
+
+  <link rel="stylesheet" href="./styles/base.css">
+  <link rel="stylesheet" href="./styles/layout.css">
+  <link rel="stylesheet" href="./styles/app.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+  <div class="app-container">
+
+    <div class="upload-card">
+
+      <h1>ART AMMO</h1>
+
+      <p class="subtitle">
+        Система аналізу комплектів
+      </p>
+
+      <label class="upload-button">
+        Завантажити Excel
+        <input type="file" id="excelFile" accept=".xlsx,.xls" hidden>
+      </label>
+
+      <div id="fileInfo"></div>
+
+      <div id="sheetList"></div>
+
+    </div>
+
+  </div>
+
+  <script src="./scripts/excel.js"></script>
+
+</body>
+</html>
