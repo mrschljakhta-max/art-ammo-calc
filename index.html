@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="./styles/app.css">
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
 
 <body>
@@ -38,6 +42,10 @@
         Експорт Excel
       </button>
 
+      <button id="exportPdfBtn" class="analyze-button" disabled>
+        PDF-звіт
+      </button>
+
       <div id="fileInfo"></div>
 
       <div id="sheetList"></div>
@@ -49,8 +57,12 @@
   </div>
 
   <script src="./scripts/excel.js"></script>
+
   <script src="./scripts/calculator.js"></script>
+
   <script src="./scripts/export.js"></script>
+
+  <script src="./scripts/export-pdf.js"></script>
 
 </body>
 </html>
