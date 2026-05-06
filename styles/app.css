@@ -60,3 +60,56 @@ h1 {
 
   background: rgba(255,255,255,0.05);
 }
+.sheet-item {
+  cursor: pointer;
+}
+
+.sheet-item:hover {
+  background: rgba(88, 101, 242, 0.22);
+}
+
+.table-panel {
+  margin-top: 32px;
+}
+
+.table-panel h2 {
+  margin-bottom: 16px;
+  font-size: 24px;
+}
+
+.table-wrap {
+  max-height: 420px;
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: #252b3a;
+  color: #ffffff;
+  z-index: 2;
+}
+
+th,
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+  white-space: nowrap;
+}
+
+td {
+  color: rgba(255,255,255,0.82);
+}
+
+tr:hover td {
+  background: rgba(255,255,255,0.04);
+}
