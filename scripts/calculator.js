@@ -27,7 +27,6 @@ function analyzeWorkbook() {
 
   const unitItems = allItems.filter(item => !item.isSummarySheet);
   const summaryItems = allItems.filter(item => item.isSummarySheet);
-
   const grouped = groupByUnit(unitItems);
 
   window.ArtAmmoState.analysisItems = allItems;
@@ -44,19 +43,24 @@ function analyzeWorkbook() {
 function parseStructuredSheet(sheetName, rows) {
   const items = [];
 
-  const isSummarySheet = sheetName.trim().toLowerCase() === "аг3+ар";
+  const schema = ART_AMMO_SCHEMA;
+  const cols = schema.COLUMNS;
+
+  const isSummarySheet =
+    sheetName.trim().toLowerCase() === schema.SUMMARY_SHEET_NAME.toLowerCase();
 
   rows.forEach((row, rowIndex) => {
-    if (rowIndex < 5) return;
+    if (rowIndex < schema.START_ROW_INDEX) return;
 
-    const category = cleanCell(row[0]);
-    const ammoText = cleanCell(row[2]);
-    const rangeMeters = toNumber(row[3]);
-    const received = toNumber(row[4]);
-    const spent = toNumber(row[5]);
-    const balance = toNumber(row[6]);
+    const category = cleanCell(row[cols.category]);
+    const ammoText = cleanCell(row[cols.ammo]);
+    const rangeMeters = toNumber(row[cols.rangeMeters]);
+    const received = toNumber(row[cols.received]);
+    const spent = toNumber(row[cols.spent]);
+    const balance = toNumber(row[cols.balance]);
 
     if (!ammoText) return;
+    if (isProbablyHeader(ammoText)) return;
 
     const parsed = parseAmmoName(ammoText);
 
@@ -82,7 +86,7 @@ function parseStructuredSheet(sheetName, rows) {
       rangeKm,
       rangeLabel: rangeKm ? `${rangeKm.toFixed(1)} км` : "",
 
-      longRange: rangeKm >= 18,
+      longRange: rangeKm >= schema.LONG_RANGE_KM,
 
       received,
       spent,
@@ -104,10 +108,19 @@ function parseAmmoName(text) {
   if (!match) return null;
 
   return {
-    projectile: match[1].trim(),
-    charge: match[2].trim(),
+    projectile: normalizeName(match[1]),
+    charge: normalizeName(match[2]),
     note: cleanCell(match[3])
   };
+}
+
+function normalizeName(value) {
+  return cleanCell(value)
+    .replace(/^М/g, "M")
+    .replace(/\s*\/\s*/g, "/")
+    .replace(/\s*,\s*/g, ", ")
+    .replace(/\s*-\s*/g, "-")
+    .trim();
 }
 
 function cleanCell(value) {
@@ -126,6 +139,19 @@ function toNumber(value) {
   );
 
   return Number.isNaN(number) ? 0 : number;
+}
+
+function isProbablyHeader(text) {
+  const value = cleanCell(text).toLowerCase();
+
+  return [
+    "тип",
+    "найменування",
+    "дальність",
+    "отримання",
+    "витрата",
+    "залишок"
+  ].some(word => value.includes(word));
 }
 
 function groupByUnit(items) {
@@ -226,15 +252,18 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
               <th>Значення</th>
             </tr>
           </thead>
+
           <tbody>
             <tr>
               <td>Залишок по аркушах підрозділів</td>
               <td>${unitTotalBalance}</td>
             </tr>
+
             <tr>
-              <td>Залишок по зведеному аркушу АГ3+АР</td>
+              <td>Залишок по зведеному аркушу ${ART_AMMO_SCHEMA.SUMMARY_SHEET_NAME}</td>
               <td>${summaryTotalBalance}</td>
             </tr>
+
             <tr>
               <td>Різниця</td>
               <td>${unitTotalBalance - summaryTotalBalance}</td>
@@ -259,6 +288,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
               <th>Далекобійних</th>
             </tr>
           </thead>
+
           <tbody>
   `;
 
@@ -302,6 +332,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
               <th>Залишок</th>
             </tr>
           </thead>
+
           <tbody>
   `;
 
