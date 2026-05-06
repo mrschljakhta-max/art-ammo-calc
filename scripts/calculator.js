@@ -38,6 +38,8 @@ function analyzeWorkbook() {
 
   document.getElementById("exportExcelBtn").disabled = false;
 
+  document.getElementById("exportPdfBtn").disabled = false;
+
   renderAnalysis(result);
 
 }
