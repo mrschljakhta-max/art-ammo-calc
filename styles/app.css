@@ -1,1 +1,62 @@
+.upload-card {
+  width: 700px;
 
+  background: #1b1f2b;
+
+  border-radius: 24px;
+
+  padding: 40px;
+
+  border: 1px solid rgba(255,255,255,0.1);
+
+  box-shadow:
+    0 0 40px rgba(0,0,0,0.5);
+}
+
+h1 {
+  font-size: 42px;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  opacity: 0.7;
+  margin-bottom: 30px;
+}
+
+.upload-button {
+  display: inline-flex;
+
+  padding: 16px 28px;
+
+  background: #5865f2;
+
+  border-radius: 14px;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.upload-button:hover {
+  transform: translateY(-2px);
+}
+
+#fileInfo {
+  margin-top: 25px;
+}
+
+#sheetList {
+  margin-top: 25px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sheet-item {
+  padding: 14px;
+
+  border-radius: 12px;
+
+  background: rgba(255,255,255,0.05);
+}
