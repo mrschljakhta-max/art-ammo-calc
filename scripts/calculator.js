@@ -1,7 +1,13 @@
 const analyzeBtn = document.getElementById("analyzeBtn");
 const analysisPanel = document.getElementById("analysisPanel");
 
+const filtersPanel = document.getElementById("filtersPanel");
+const unitFilter = document.getElementById("unitFilter");
+const longRangeOnly = document.getElementById("longRangeOnly");
+
 analyzeBtn.addEventListener("click", analyzeWorkbook);
+unitFilter.addEventListener("change", applyFilters);
+longRangeOnly.addEventListener("change", applyFilters);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -33,6 +39,8 @@ function analyzeWorkbook() {
   window.ArtAmmoState.unitItems = unitItems;
   window.ArtAmmoState.summaryItems = summaryItems;
   window.ArtAmmoState.groupedByUnit = grouped;
+
+  setupFilters(grouped);
 
   document.getElementById("exportExcelBtn").disabled = false;
   document.getElementById("exportPdfBtn").disabled = false;
@@ -183,6 +191,42 @@ function groupByUnit(items) {
   });
 
   return grouped;
+}
+
+function setupFilters(grouped) {
+  unitFilter.innerHTML = `<option value="all">Всі підрозділи</option>`;
+
+  Object.keys(grouped).forEach(unitName => {
+    const option = document.createElement("option");
+    option.value = unitName;
+    option.textContent = unitName;
+    unitFilter.appendChild(option);
+  });
+
+  filtersPanel.hidden = false;
+}
+
+function applyFilters() {
+  const items = window.ArtAmmoState?.unitItems || [];
+
+  let filtered = [...items];
+
+  if (unitFilter.value !== "all") {
+    filtered = filtered.filter(item => item.unit === unitFilter.value);
+  }
+
+  if (longRangeOnly.checked) {
+    filtered = filtered.filter(item => item.longRange);
+  }
+
+  const grouped = groupByUnit(filtered);
+
+  renderAnalysis(
+    filtered,
+    filtered,
+    [],
+    grouped
+  );
 }
 
 function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
@@ -363,4 +407,21 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   `;
 
   analysisPanel.innerHTML = html;
+}
+
+
+function getCurrentFilteredItems() {
+  const items = window.ArtAmmoState?.unitItems || [];
+
+  let filtered = [...items];
+
+  if (unitFilter.value !== "all") {
+    filtered = filtered.filter(item => item.unit === unitFilter.value);
+  }
+
+  if (longRangeOnly.checked) {
+    filtered = filtered.filter(item => item.longRange);
+  }
+
+  return filtered;
 }
