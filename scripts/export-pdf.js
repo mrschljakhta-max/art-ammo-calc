@@ -4,16 +4,25 @@ exportPdfBtn.addEventListener("click", exportAnalysisToPdf);
 
 function exportAnalysisToPdf() {
   const items = window.ArtAmmoState?.unitItems || [];
+  const grouped = window.ArtAmmoState?.groupedByUnit || {};
 
   if (!items.length) {
     alert("Немає даних для PDF. Спочатку натисни «Аналізувати файл».");
     return;
   }
 
-  const grouped = window.ArtAmmoState?.groupedByUnit || {};
-
   const totalBalance = items.reduce(
     (sum, item) => sum + Number(item.balance || 0),
+    0
+  );
+
+  const totalReceived = items.reduce(
+    (sum, item) => sum + Number(item.received || 0),
+    0
+  );
+
+  const totalSpent = items.reduce(
+    (sum, item) => sum + Number(item.spent || 0),
     0
   );
 
@@ -31,12 +40,12 @@ function exportAnalysisToPdf() {
 
   const unitSummaryBody = [
     [
-      "Підрозділ",
-      "Комбінацій",
-      "Отримання",
-      "Витрата",
-      "Залишок",
-      "Далекобійних"
+      { text: "Підрозділ", bold: true },
+      { text: "Комбінацій", bold: true },
+      { text: "Отримання", bold: true },
+      { text: "Витрата", bold: true },
+      { text: "Залишок", bold: true },
+      { text: "Далекобійних", bold: true }
     ]
   ];
 
@@ -53,12 +62,12 @@ function exportAnalysisToPdf() {
 
   const detailsBody = [
     [
-      "Підрозділ",
-      "Снаряд",
-      "Заряд",
-      "Дальність, км",
-      "Далекобійна",
-      "Залишок"
+      { text: "Підрозділ", bold: true },
+      { text: "Снаряд", bold: true },
+      { text: "Заряд", bold: true },
+      { text: "Дальність, км", bold: true },
+      { text: "Далекобійна", bold: true },
+      { text: "Залишок", bold: true }
     ]
   ];
 
@@ -85,7 +94,7 @@ function exportAnalysisToPdf() {
 
     content: [
       {
-        text: "ART AMMO — Звіт первинного аналізу",
+        text: "ART AMMO — звіт аналізу залишків",
         style: "header"
       },
 
@@ -96,22 +105,12 @@ function exportAnalysisToPdf() {
 
       {
         columns: [
-          {
-            text: `Підрозділів: ${Object.keys(grouped).length}`,
-            style: "metric"
-          },
-          {
-            text: `Комбінацій: ${uniqueCombinations}`,
-            style: "metric"
-          },
-          {
-            text: `Загальний залишок: ${totalBalance}`,
-            style: "metric"
-          },
-          {
-            text: `Далекобійних: ${longRangeBalance}`,
-            style: "metric"
-          }
+          { text: `Підрозділів: ${Object.keys(grouped).length}`, style: "metric" },
+          { text: `Комбінацій: ${uniqueCombinations}`, style: "metric" },
+          { text: `Отримання: ${totalReceived}`, style: "metric" },
+          { text: `Витрата: ${totalSpent}`, style: "metric" },
+          { text: `Залишок: ${totalBalance}`, style: "metric" },
+          { text: `Далекобійних: ${longRangeBalance}`, style: "metric" }
         ],
         margin: [0, 0, 0, 16]
       },
@@ -158,7 +157,7 @@ function exportAnalysisToPdf() {
         margin: [0, 8, 0, 8]
       },
       metric: {
-        fontSize: 9,
+        fontSize: 8,
         bold: true
       }
     }
