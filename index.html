@@ -14,11 +14,16 @@
 </head>
 
 <body>
+
   <div class="app-container">
+
     <div class="upload-card">
 
       <h1>ART AMMO</h1>
-      <p class="subtitle">Система аналізу комплектів</p>
+
+      <p class="subtitle">
+        Система аналізу комплектів
+      </p>
 
       <label class="upload-button">
         Завантажити Excel
@@ -29,14 +34,23 @@
         Аналізувати файл
       </button>
 
+      <button id="exportExcelBtn" class="analyze-button" disabled>
+        Експорт Excel
+      </button>
+
       <div id="fileInfo"></div>
+
       <div id="sheetList"></div>
+
       <div id="analysisPanel"></div>
 
     </div>
+
   </div>
 
   <script src="./scripts/excel.js"></script>
   <script src="./scripts/calculator.js"></script>
+  <script src="./scripts/export.js"></script>
+
 </body>
 </html>
