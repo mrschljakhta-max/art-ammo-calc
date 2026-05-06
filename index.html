@@ -11,15 +11,12 @@
   <link rel="stylesheet" href="./styles/app.css">
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/pdfmake.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/vfs_fonts.js"></script>
 </head>
 
 <body>
-
   <div class="app-container">
-
     <div class="upload-card">
 
       <h1>ART AMMO</h1>
@@ -56,6 +53,13 @@
           <input type="checkbox" id="longRangeOnly">
           Тільки далекобійні
         </label>
+
+        <input
+          type="text"
+          id="searchFilter"
+          class="filter-control search-control"
+          placeholder="Пошук: снаряд, заряд, підрозділ..."
+        >
       </div>
 
       <div id="sheetList"></div>
@@ -63,7 +67,6 @@
       <div id="analysisPanel"></div>
 
     </div>
-
   </div>
 
   <script src="./scripts/schema.js"></script>
@@ -71,6 +74,5 @@
   <script src="./scripts/calculator.js"></script>
   <script src="./scripts/export.js"></script>
   <script src="./scripts/export-pdf.js"></script>
-
 </body>
 </html>
