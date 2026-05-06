@@ -3,75 +3,166 @@ const exportPdfBtn = document.getElementById("exportPdfBtn");
 exportPdfBtn.addEventListener("click", exportAnalysisToPdf);
 
 function exportAnalysisToPdf() {
-  const items = window.ArtAmmoState?.analysisItems || [];
+  const items = window.ArtAmmoState?.unitItems || [];
 
   if (!items.length) {
     alert("Немає даних для PDF. Спочатку натисни «Аналізувати файл».");
     return;
   }
 
-  const { jsPDF } = window.jspdf;
+  const grouped = window.ArtAmmoState?.groupedByUnit || {};
 
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "mm",
-    format: "a4"
-  });
-
-  const totalQuantity = items.reduce(
-    (sum, item) => sum + Number(item.quantity || 0),
+  const totalBalance = items.reduce(
+    (sum, item) => sum + Number(item.balance || 0),
     0
   );
 
-  const longRangeQuantity = items
+  const longRangeBalance = items
     .filter(item => item.longRange)
-    .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    .reduce((sum, item) => sum + Number(item.balance || 0), 0);
 
   const uniqueCombinations = new Set(
-    items.map(item => `${item.projectile}|${item.charge}`)
+    items.map(item => item.combination)
   ).size;
 
   const now = new Date();
   const dateText = now.toLocaleDateString("uk-UA");
+  const fileDate = now.toISOString().slice(0, 10);
 
-  doc.setFontSize(16);
-  doc.text("ART AMMO — ЗВІТ ПЕРВИННОГО АНАЛІЗУ", 14, 16);
+  const unitSummaryBody = [
+    [
+      "Підрозділ",
+      "Комбінацій",
+      "Отримання",
+      "Витрата",
+      "Залишок",
+      "Далекобійних"
+    ]
+  ];
 
-  doc.setFontSize(10);
-  doc.text(`Дата формування: ${dateText}`, 14, 24);
-  doc.text(`Комбінацій: ${uniqueCombinations}`, 14, 31);
-  doc.text(`Загальний залишок: ${totalQuantity}`, 70, 31);
-  doc.text(`Далекобійних: ${longRangeQuantity}`, 140, 31);
+  Object.values(grouped).forEach(unit => {
+    unitSummaryBody.push([
+      unit.unit,
+      String(unit.combinations.size),
+      String(unit.totalReceived),
+      String(unit.totalSpent),
+      String(unit.totalBalance),
+      String(unit.longRangeBalance)
+    ]);
+  });
 
-  const tableRows = items.map(item => [
-    item.sheetName,
-    item.projectile,
-    item.charge,
-    item.range ?? "",
-    item.longRange ? "Так" : "Ні",
-    item.quantity ?? ""
-  ]);
-
-  doc.autoTable({
-    startY: 40,
-    head: [[
-      "Аркуш",
+  const detailsBody = [
+    [
+      "Підрозділ",
       "Снаряд",
       "Заряд",
       "Дальність, км",
       "Далекобійна",
-      "Кількість"
-    ]],
-    body: tableRows,
-    styles: {
-      fontSize: 8,
-      cellPadding: 2
-    },
-    headStyles: {
-      fillColor: [37, 43, 58]
-    }
+      "Залишок"
+    ]
+  ];
+
+  items.forEach(item => {
+    detailsBody.push([
+      item.unit,
+      item.projectile,
+      item.charge,
+      item.rangeKm ? item.rangeKm.toFixed(1) : "",
+      item.longRange ? "Так" : "Ні",
+      String(item.balance)
+    ]);
   });
 
-  const fileDate = now.toISOString().slice(0, 10);
-  doc.save(`art_ammo_report_${fileDate}.pdf`);
+  const docDefinition = {
+    pageSize: "A4",
+    pageOrientation: "landscape",
+    pageMargins: [24, 28, 24, 28],
+
+    defaultStyle: {
+      font: "Roboto",
+      fontSize: 8
+    },
+
+    content: [
+      {
+        text: "ART AMMO — Звіт первинного аналізу",
+        style: "header"
+      },
+
+      {
+        text: `Дата формування: ${dateText}`,
+        margin: [0, 0, 0, 12]
+      },
+
+      {
+        columns: [
+          {
+            text: `Підрозділів: ${Object.keys(grouped).length}`,
+            style: "metric"
+          },
+          {
+            text: `Комбінацій: ${uniqueCombinations}`,
+            style: "metric"
+          },
+          {
+            text: `Загальний залишок: ${totalBalance}`,
+            style: "metric"
+          },
+          {
+            text: `Далекобійних: ${longRangeBalance}`,
+            style: "metric"
+          }
+        ],
+        margin: [0, 0, 0, 16]
+      },
+
+      {
+        text: "Підсумок по підрозділах",
+        style: "section"
+      },
+
+      {
+        table: {
+          headerRows: 1,
+          widths: ["*", "auto", "auto", "auto", "auto", "auto"],
+          body: unitSummaryBody
+        },
+        layout: "lightHorizontalLines",
+        margin: [0, 0, 0, 18]
+      },
+
+      {
+        text: "Детальний аналіз",
+        style: "section"
+      },
+
+      {
+        table: {
+          headerRows: 1,
+          widths: ["*", "*", "*", "auto", "auto", "auto"],
+          body: detailsBody
+        },
+        layout: "lightHorizontalLines"
+      }
+    ],
+
+    styles: {
+      header: {
+        fontSize: 16,
+        bold: true,
+        margin: [0, 0, 0, 8]
+      },
+      section: {
+        fontSize: 12,
+        bold: true,
+        margin: [0, 8, 0, 8]
+      },
+      metric: {
+        fontSize: 9,
+        bold: true
+      }
+    }
+  };
+
+  pdfMake.createPdf(docDefinition).download(`art_ammo_report_${fileDate}.pdf`);
 }
