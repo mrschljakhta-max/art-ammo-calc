@@ -21,96 +21,111 @@ function analyzeWorkbook() {
       defval: ""
     });
 
-    const parsedItems = parseUnitSheet(sheetName, rows);
+    const parsedItems = parseStructuredSheet(sheetName, rows);
     allItems.push(...parsedItems);
   });
 
-  const grouped = groupByUnit(allItems);
+  const unitItems = allItems.filter(item => !item.isSummarySheet);
+  const summaryItems = allItems.filter(item => item.isSummarySheet);
+
+  const grouped = groupByUnit(unitItems);
 
   window.ArtAmmoState.analysisItems = allItems;
+  window.ArtAmmoState.unitItems = unitItems;
+  window.ArtAmmoState.summaryItems = summaryItems;
   window.ArtAmmoState.groupedByUnit = grouped;
 
   document.getElementById("exportExcelBtn").disabled = false;
   document.getElementById("exportPdfBtn").disabled = false;
 
-  renderAnalysis(allItems, grouped);
+  renderAnalysis(allItems, unitItems, summaryItems, grouped);
 }
 
-function parseUnitSheet(sheetName, rows) {
+function parseStructuredSheet(sheetName, rows) {
   const items = [];
 
+  const isSummarySheet = sheetName.trim().toLowerCase() === "аг3+ар";
+
   rows.forEach((row, rowIndex) => {
-    const cells = row.map(cell => String(cell || "").trim());
+    if (rowIndex < 5) return;
 
-    cells.forEach((cell) => {
-      const parsed = parseProjectileCharge(cell);
+    const category = cleanCell(row[0]);
+    const ammoText = cleanCell(row[2]);
+    const rangeMeters = toNumber(row[3]);
+    const received = toNumber(row[4]);
+    const spent = toNumber(row[5]);
+    const balance = toNumber(row[6]);
 
-      if (!parsed) return;
+    if (!ammoText) return;
 
-      const range = findRange(cells);
-      const quantity = findQuantity(cells);
+    const parsed = parseAmmoName(ammoText);
 
-      items.push({
-        unit: sheetName,
-        row: rowIndex + 1,
-        projectile: parsed.projectile,
-        charge: parsed.charge,
-        combination: `${parsed.projectile} + ${parsed.charge}`,
-        range,
-        longRange: range >= 18,
-        quantity
-      });
+    if (!parsed) return;
+
+    const rangeKm = rangeMeters ? rangeMeters / 1000 : null;
+
+    items.push({
+      sheetName,
+      unit: sheetName,
+      row: rowIndex + 1,
+
+      category,
+      ammoRaw: ammoText,
+
+      projectile: parsed.projectile,
+      charge: parsed.charge,
+      note: parsed.note,
+
+      combination: `${parsed.projectile} + ${parsed.charge}`,
+
+      rangeMeters,
+      rangeKm,
+      rangeLabel: rangeKm ? `${rangeKm.toFixed(1)} км` : "",
+
+      longRange: rangeKm >= 18,
+
+      received,
+      spent,
+      quantity: balance,
+      balance,
+
+      isSummarySheet
     });
   });
 
   return items;
 }
 
-function parseProjectileCharge(text) {
-  const match = String(text || "").trim().match(/^(.+?)\s*\((.+?)\)$/);
+function parseAmmoName(text) {
+  const value = cleanCell(text);
+
+  const match = value.match(/^(.+?)\s*\((.+?)\)(.*)$/);
 
   if (!match) return null;
 
   return {
     projectile: match[1].trim(),
-    charge: match[2].trim()
+    charge: match[2].trim(),
+    note: cleanCell(match[3])
   };
 }
 
-function findRange(cells) {
-  for (const cell of cells) {
-    const text = String(cell || "")
-      .replace(",", ".")
-      .trim();
-
-    const kmMatch = text.match(/(\d+(\.\d+)?)\s*км/i);
-
-    if (kmMatch) {
-      return Number(kmMatch[1]);
-    }
-
-    const number = Number(text);
-
-    if (!Number.isNaN(number) && number > 0 && number <= 70) {
-      return number;
-    }
-  }
-
-  return null;
+function cleanCell(value) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function findQuantity(cells) {
-  let lastNumber = 0;
+function toNumber(value) {
+  if (value === null || value === undefined || value === "") return 0;
 
-  cells.forEach((cell) => {
-    const value = Number(String(cell).replace(",", "."));
+  const number = Number(
+    String(value)
+      .replace(",", ".")
+      .replace(/\s+/g, "")
+  );
 
-    if (!Number.isNaN(value)) {
-      lastNumber = value;
-    }
-  });
-
-  return lastNumber;
+  return Number.isNaN(number) ? 0 : number;
 }
 
 function groupByUnit(items) {
@@ -121,17 +136,21 @@ function groupByUnit(items) {
       grouped[item.unit] = {
         unit: item.unit,
         items: [],
-        totalQuantity: 0,
-        longRangeQuantity: 0,
+        totalReceived: 0,
+        totalSpent: 0,
+        totalBalance: 0,
+        longRangeBalance: 0,
         combinations: new Set()
       };
     }
 
     grouped[item.unit].items.push(item);
-    grouped[item.unit].totalQuantity += Number(item.quantity || 0);
+    grouped[item.unit].totalReceived += Number(item.received || 0);
+    grouped[item.unit].totalSpent += Number(item.spent || 0);
+    grouped[item.unit].totalBalance += Number(item.balance || 0);
 
     if (item.longRange) {
-      grouped[item.unit].longRangeQuantity += Number(item.quantity || 0);
+      grouped[item.unit].longRangeBalance += Number(item.balance || 0);
     }
 
     grouped[item.unit].combinations.add(item.combination);
@@ -140,34 +159,40 @@ function groupByUnit(items) {
   return grouped;
 }
 
-function renderAnalysis(items, grouped) {
-  if (!items.length) {
+function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
+  if (!allItems.length) {
     analysisPanel.innerHTML = `
       <p>
-        Не знайдено комбінацій типу:
-        <b>M483 (M3A1)</b>
+        Не знайдено структурованих рядків у колонці <b>C</b>
+        формату <b>Снаряд (Заряд)</b>.
       </p>
     `;
     return;
   }
 
-  const totalQuantity = items.reduce(
-    (sum, item) => sum + Number(item.quantity || 0),
+  const unitTotalBalance = unitItems.reduce(
+    (sum, item) => sum + Number(item.balance || 0),
     0
   );
 
-  const longRangeQuantity = items
+  const unitLongRangeBalance = unitItems
     .filter(item => item.longRange)
-    .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    .reduce((sum, item) => sum + Number(item.balance || 0), 0);
+
+  const summaryTotalBalance = summaryItems.reduce(
+    (sum, item) => sum + Number(item.balance || 0),
+    0
+  );
 
   const uniqueCombinations = new Set(
-    items.map(item => item.combination)
+    unitItems.map(item => item.combination)
   ).size;
 
   const unitCount = Object.keys(grouped).length;
 
   let html = `
     <div class="analysis-grid">
+
       <div class="metric-card">
         <div class="metric-label">Підрозділів</div>
         <div class="metric-value">${unitCount}</div>
@@ -179,25 +204,58 @@ function renderAnalysis(items, grouped) {
       </div>
 
       <div class="metric-card">
-        <div class="metric-label">Загальний залишок</div>
-        <div class="metric-value">${totalQuantity}</div>
+        <div class="metric-label">Залишок по підрозділах</div>
+        <div class="metric-value">${unitTotalBalance}</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-label">Далекобійних</div>
-        <div class="metric-value">${longRangeQuantity}</div>
+        <div class="metric-value">${unitLongRangeBalance}</div>
+      </div>
+
+    </div>
+
+    <div class="table-panel analysis-table">
+      <h2>Контрольна звірка</h2>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Показник</th>
+              <th>Значення</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Залишок по аркушах підрозділів</td>
+              <td>${unitTotalBalance}</td>
+            </tr>
+            <tr>
+              <td>Залишок по зведеному аркушу АГ3+АР</td>
+              <td>${summaryTotalBalance}</td>
+            </tr>
+            <tr>
+              <td>Різниця</td>
+              <td>${unitTotalBalance - summaryTotalBalance}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <div class="table-panel analysis-table">
       <h2>Підсумок по підрозділах</h2>
+
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Підрозділ</th>
               <th>Комбінацій</th>
-              <th>Загальний залишок</th>
+              <th>Отримання</th>
+              <th>Витрата</th>
+              <th>Залишок</th>
               <th>Далекобійних</th>
             </tr>
           </thead>
@@ -209,8 +267,10 @@ function renderAnalysis(items, grouped) {
       <tr>
         <td>${unitData.unit}</td>
         <td>${unitData.combinations.size}</td>
-        <td>${unitData.totalQuantity}</td>
-        <td>${unitData.longRangeQuantity}</td>
+        <td>${unitData.totalReceived}</td>
+        <td>${unitData.totalSpent}</td>
+        <td>${unitData.totalBalance}</td>
+        <td>${unitData.longRangeBalance}</td>
       </tr>
     `;
   });
@@ -222,35 +282,44 @@ function renderAnalysis(items, grouped) {
     </div>
 
     <div class="table-panel analysis-table">
-      <h2>Детальний аналіз</h2>
+      <h2>Детальний аналіз по підрозділах</h2>
+
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Підрозділ</th>
               <th>Рядок</th>
+              <th>Категорія</th>
               <th>Снаряд</th>
               <th>Заряд</th>
-              <th>Комбінація</th>
-              <th>Дальність</th>
+              <th>Примітка</th>
+              <th>Дальність, м</th>
+              <th>Дальність, км</th>
               <th>Далекобійна</th>
-              <th>Кількість</th>
+              <th>Отримання</th>
+              <th>Витрата</th>
+              <th>Залишок</th>
             </tr>
           </thead>
           <tbody>
   `;
 
-  items.forEach((item) => {
+  unitItems.forEach((item) => {
     html += `
       <tr>
         <td>${item.unit}</td>
         <td>${item.row}</td>
+        <td>${item.category}</td>
         <td>${item.projectile}</td>
         <td>${item.charge}</td>
-        <td>${item.combination}</td>
-        <td>${item.range ?? ""}</td>
+        <td>${item.note}</td>
+        <td>${item.rangeMeters || ""}</td>
+        <td>${item.rangeKm ? item.rangeKm.toFixed(1) : ""}</td>
         <td>${item.longRange ? "Так" : "Ні"}</td>
-        <td>${item.quantity}</td>
+        <td>${item.received}</td>
+        <td>${item.spent}</td>
+        <td>${item.balance}</td>
       </tr>
     `;
   });
