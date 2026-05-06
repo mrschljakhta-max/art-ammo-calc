@@ -13,7 +13,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/pdfmake.min.js"></script>
-
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/vfs_fonts.js"></script>
 </head>
 
@@ -48,6 +47,17 @@
 
       <div id="fileInfo"></div>
 
+      <div class="filters-panel" id="filtersPanel" hidden>
+        <select id="unitFilter" class="filter-control">
+          <option value="all">Всі підрозділи</option>
+        </select>
+
+        <label class="filter-check">
+          <input type="checkbox" id="longRangeOnly">
+          Тільки далекобійні
+        </label>
+      </div>
+
       <div id="sheetList"></div>
 
       <div id="analysisPanel"></div>
@@ -57,13 +67,9 @@
   </div>
 
   <script src="./scripts/schema.js"></script>
-
   <script src="./scripts/excel.js"></script>
-
   <script src="./scripts/calculator.js"></script>
-
   <script src="./scripts/export.js"></script>
-
   <script src="./scripts/export-pdf.js"></script>
 
 </body>
