@@ -20,10 +20,12 @@ function exportAnalysisToExcel() {
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
-
   const workbook = XLSX.utils.book_new();
 
   XLSX.utils.book_append_sheet(workbook, worksheet, "Первинний аналіз");
 
-  XLSX.writeFile(workbook, "art_ammo_analysis.xlsx");
+  const now = new Date();
+  const fileDate = now.toISOString().slice(0, 10);
+
+  XLSX.writeFile(workbook, `art_ammo_analysis_${fileDate}.xlsx`);
 }
