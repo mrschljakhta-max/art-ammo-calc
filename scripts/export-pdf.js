@@ -3,13 +3,16 @@ const exportPdfBtn = document.getElementById("exportPdfBtn");
 exportPdfBtn.addEventListener("click", exportAnalysisToPdf);
 
 function exportAnalysisToPdf() {
-  const items = window.ArtAmmoState?.unitItems || [];
-  const grouped = window.ArtAmmoState?.groupedByUnit || {};
+  const items = typeof getCurrentFilteredItems === "function"
+    ? getCurrentFilteredItems()
+    : (window.ArtAmmoState?.unitItems || []);
 
   if (!items.length) {
     alert("Немає даних для PDF. Спочатку натисни «Аналізувати файл».");
     return;
   }
+
+  const grouped = groupByUnit(items);
 
   const totalBalance = items.reduce(
     (sum, item) => sum + Number(item.balance || 0),
