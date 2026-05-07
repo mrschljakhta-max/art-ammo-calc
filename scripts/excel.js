@@ -1,6 +1,7 @@
 const excelInput = document.getElementById("excelFile");
 const fileInfo = document.getElementById("fileInfo");
 const sheetList = document.getElementById("sheetList");
+const appStatus = document.getElementById("appStatus");
 
 let currentWorkbook = null;
 
@@ -16,15 +17,58 @@ excelInput.addEventListener("change", handleExcel);
 
 function handleExcel(event) {
   const file = event.target.files[0];
-
   if (!file) return;
 
-  fileInfo.innerHTML = `<p>Файл: ${file.name}</p>`;
+  resetWorkbookState(file.name);
 
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+
+      currentWorkbook = XLSX.read(data, {
+        type: "array",
+        cellDates: true
+      });
+
+      window.ArtAmmoState.workbook = currentWorkbook;
+
+      document.getElementById("analyzeBtn").disabled = false;
+      setStatus("Файл завантажено", "ok");
+
+      renderSheets(currentWorkbook);
+
+      if (typeof analyzeWorkbook === "function") {
+        analyzeWorkbook();
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus("Помилка читання Excel", "error");
+      alert("Не вдалося прочитати Excel-файл. Перевір формат файлу.");
+    }
+  };
+
+  reader.onerror = function () {
+    setStatus("Помилка завантаження", "error");
+    alert("Не вдалося завантажити файл.");
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+function resetWorkbookState(fileName) {
+  fileInfo.innerHTML = `<p>Файл: ${escapeHtml(fileName)}</p>`;
   sheetList.innerHTML = "";
 
   const analysisPanel = document.getElementById("analysisPanel");
   if (analysisPanel) analysisPanel.innerHTML = "";
+
+  const filterStatus = document.getElementById("filterStatus");
+  if (filterStatus) {
+    filterStatus.hidden = true;
+    filterStatus.textContent = "";
+  }
 
   document.getElementById("analyzeBtn").disabled = true;
   document.getElementById("exportExcelBtn").disabled = true;
@@ -33,42 +77,29 @@ function handleExcel(event) {
   const filtersPanel = document.getElementById("filtersPanel");
   if (filtersPanel) filtersPanel.hidden = true;
 
+  const unitFilter = document.getElementById("unitFilter");
+  const longRangeOnly = document.getElementById("longRangeOnly");
+  const searchFilter = document.getElementById("searchFilter");
+
+  if (unitFilter) unitFilter.innerHTML = `<option value="all">Всі підрозділи</option>`;
+  if (longRangeOnly) longRangeOnly.checked = false;
+  if (searchFilter) searchFilter.value = "";
+
   window.ArtAmmoState.workbook = null;
   window.ArtAmmoState.analysisItems = [];
   window.ArtAmmoState.unitItems = [];
   window.ArtAmmoState.summaryItems = [];
   window.ArtAmmoState.groupedByUnit = {};
 
-  const reader = new FileReader();
-
-  reader.onload = function (e) {
-    const data = new Uint8Array(e.target.result);
-
-    currentWorkbook = XLSX.read(data, {
-      type: "array",
-      cellDates: true
-    });
-
-    window.ArtAmmoState.workbook = currentWorkbook;
-
-    document.getElementById("analyzeBtn").disabled = false;
-
-    renderSheets(currentWorkbook);
-
-    if (typeof analyzeWorkbook === "function") {
-      analyzeWorkbook();
-    }
-  };
-
-  reader.readAsArrayBuffer(file);
+  setStatus("Читання файлу...", "wait");
 }
 
 function renderSheets(workbook) {
   sheetList.innerHTML = "";
 
   workbook.SheetNames.forEach((sheetName) => {
-    const div = document.createElement("div");
-
+    const div = document.createElement("button");
+    div.type = "button";
     div.className = "sheet-item";
     div.textContent = sheetName;
 
@@ -81,34 +112,37 @@ function renderSheets(workbook) {
 }
 
 function renderSheetTable(sheetName) {
-  const sheet = currentWorkbook.Sheets[sheetName];
+  if (!currentWorkbook) return;
 
+  const sheet = currentWorkbook.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json(sheet, {
     header: 1,
     defval: ""
   });
 
+  const oldPanel = document.querySelector(".sheet-preview-panel");
+  if (oldPanel) oldPanel.remove();
+
   if (!rows.length) {
-    sheetList.innerHTML += `<p>Аркуш порожній</p>`;
+    sheetList.insertAdjacentHTML("afterend", `<p class="sheet-preview-panel">Аркуш порожній</p>`);
     return;
   }
 
+  const previewRows = rows.slice(0, 80);
+
   let html = `
-    <div class="table-panel">
-      <h2>${sheetName}</h2>
+    <div class="table-panel sheet-preview-panel">
+      <h2>${escapeHtml(sheetName)}</h2>
       <div class="table-wrap">
         <table>
   `;
 
-  rows.forEach((row, rowIndex) => {
+  previewRows.forEach((row, rowIndex) => {
     html += "<tr>";
 
     row.forEach((cell) => {
-      if (rowIndex === 0) {
-        html += `<th>${cell}</th>`;
-      } else {
-        html += `<td>${cell}</td>`;
-      }
+      const safeCell = escapeHtml(cell);
+      html += rowIndex === 0 ? `<th>${safeCell}</th>` : `<td>${safeCell}</td>`;
     });
 
     html += "</tr>";
@@ -120,11 +154,21 @@ function renderSheetTable(sheetName) {
     </div>
   `;
 
-  const oldPanel = document.querySelector(".table-panel");
+  sheetList.insertAdjacentHTML("afterend", html);
+}
 
-  if (oldPanel) oldPanel.remove();
+function setStatus(text, type = "wait") {
+  if (!appStatus) return;
 
-  document
-    .querySelector(".upload-card")
-    .insertAdjacentHTML("beforeend", html);
+  appStatus.textContent = text;
+  appStatus.dataset.type = type;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
