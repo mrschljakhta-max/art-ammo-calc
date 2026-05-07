@@ -20,6 +20,10 @@
       ? getCommanderSummary(items, grouped)
       : [];
 
+    const reportPassport = typeof getReportPassport === "function"
+      ? getReportPassport(items, grouped)
+      : [];
+
     const totalBalance = items.reduce((sum, item) => sum + Number(item.balance || 0), 0);
     const totalReceived = items.reduce((sum, item) => sum + Number(item.received || 0), 0);
     const totalSpent = items.reduce((sum, item) => sum + Number(item.spent || 0), 0);
@@ -47,6 +51,27 @@
         margin: [0, 0, 0, 16]
       }
     ];
+
+    if (reportPassport.length) {
+      content.push(
+        { text: "Паспорт звіту", style: "section" },
+        {
+          table: {
+            headerRows: 1,
+            widths: ["auto", "*"],
+            body: [
+              [
+                { text: "Параметр", bold: true },
+                { text: "Значення", bold: true }
+              ],
+              ...reportPassport.map(item => [item.label, item.value])
+            ]
+          },
+          layout: "lightHorizontalLines",
+          margin: [0, 0, 0, 18]
+        }
+      );
+    }
 
     if (commanderSummary.length) {
       content.push(

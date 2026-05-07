@@ -10,7 +10,10 @@ window.ArtAmmoState = {
   analysisItems: [],
   unitItems: [],
   summaryItems: [],
-  groupedByUnit: {}
+  groupedByUnit: {},
+  fileName: "",
+  loadedAt: null,
+  analyzedAt: null
 };
 
 excelInput.addEventListener("change", handleExcel);
@@ -33,6 +36,7 @@ function handleExcel(event) {
       });
 
       window.ArtAmmoState.workbook = currentWorkbook;
+      window.ArtAmmoState.loadedAt = new Date().toISOString();
 
       document.getElementById("analyzeBtn").disabled = false;
       setStatus("Файл завантажено", "ok");
@@ -90,6 +94,9 @@ function resetWorkbookState(fileName) {
   window.ArtAmmoState.unitItems = [];
   window.ArtAmmoState.summaryItems = [];
   window.ArtAmmoState.groupedByUnit = {};
+  window.ArtAmmoState.fileName = fileName || "";
+  window.ArtAmmoState.loadedAt = null;
+  window.ArtAmmoState.analyzedAt = null;
 
   setStatus("Читання файлу...", "wait");
 }

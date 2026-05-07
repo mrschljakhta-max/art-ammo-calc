@@ -22,6 +22,20 @@
       ? getCommanderSummary(items, grouped)
       : [];
 
+    const reportPassport = typeof getReportPassport === "function"
+      ? getReportPassport(items, grouped)
+      : [];
+
+    if (reportPassport.length) {
+      const passportRows = reportPassport.map(item => ({
+        "Параметр": item.label,
+        "Значення": item.value
+      }));
+
+      const passportSheet = XLSX.utils.json_to_sheet(passportRows);
+      XLSX.utils.book_append_sheet(workbook, passportSheet, "Паспорт звіту");
+    }
+
     if (commanderSummary.length) {
       const commanderRows = commanderSummary.map(item => ({
         "Блок": item.label,

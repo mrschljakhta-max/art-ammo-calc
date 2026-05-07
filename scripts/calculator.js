@@ -47,6 +47,7 @@ function analyzeWorkbook() {
   window.ArtAmmoState.unitItems = unitItems;
   window.ArtAmmoState.summaryItems = summaryItems;
   window.ArtAmmoState.groupedByUnit = grouped;
+  window.ArtAmmoState.analyzedAt = new Date().toISOString();
 
   setupFilters(grouped);
 
@@ -494,6 +495,106 @@ function renderCommanderSummary(summary) {
   `;
 }
 
+
+function formatDateTime(value) {
+  if (!value) return "—";
+
+  try {
+    return new Date(value).toLocaleString("uk-UA");
+  } catch (error) {
+    return "—";
+  }
+}
+
+function getStockFilterLabel() {
+  const labels = {
+    all: "всі залишки",
+    problem: "вузькі місця",
+    zero: "нульові",
+    low: "малий залишок"
+  };
+
+  return labels[stockFilter?.value] || "всі залишки";
+}
+
+function getSortLabel() {
+  const labels = {
+    default: "як у файлі",
+    balanceAsc: "залишок ↑",
+    balanceDesc: "залишок ↓",
+    rangeDesc: "дальність ↓",
+    rangeAsc: "дальність ↑",
+    unitAsc: "підрозділ А-Я",
+    projectileAsc: "снаряд А-Я"
+  };
+
+  return labels[sortFilter?.value] || "як у файлі";
+}
+
+function getActiveFilterDescription() {
+  const active = [];
+
+  if (unitFilter?.value && unitFilter.value !== "all") {
+    active.push(`підрозділ: ${unitFilter.value}`);
+  }
+
+  if (longRangeOnly?.checked) {
+    active.push("тільки далекобійні");
+  }
+
+  if (searchFilter?.value?.trim()) {
+    active.push(`пошук: ${searchFilter.value.trim()}`);
+  }
+
+  if (stockFilter?.value && stockFilter.value !== "all") {
+    active.push(`залишки: ${getStockFilterLabel()}`);
+  }
+
+  return active.length ? active.join("; ") : "без додаткових фільтрів";
+}
+
+function getReportPassport(items, grouped) {
+  const totalRows = window.ArtAmmoState?.unitItems?.length || 0;
+  const fileName = window.ArtAmmoState?.fileName || "—";
+  const loadedAt = formatDateTime(window.ArtAmmoState?.loadedAt);
+  const analyzedAt = formatDateTime(window.ArtAmmoState?.analyzedAt);
+  const threshold = getLowBalanceThreshold();
+
+  return [
+    { label: "Файл Excel", value: fileName },
+    { label: "Час завантаження", value: loadedAt },
+    { label: "Час аналізу", value: analyzedAt },
+    { label: "Показано рядків", value: `${items.length} з ${totalRows}` },
+    { label: "Підрозділів у вибірці", value: String(Object.keys(grouped || {}).length) },
+    { label: "Активні фільтри", value: getActiveFilterDescription() },
+    { label: "Поріг малого залишку", value: `≤${threshold}` },
+    { label: "Фільтр залишків", value: getStockFilterLabel() },
+    { label: "Сортування", value: getSortLabel() }
+  ];
+}
+
+function renderReportPassport(passport) {
+  if (!passport?.length) return "";
+
+  return `
+    <div class="report-passport-panel">
+      <div class="report-passport-header">
+        <h2>Паспорт звіту</h2>
+        <span>Контекст формування поточної вибірки</span>
+      </div>
+
+      <div class="report-passport-grid">
+        ${passport.map(item => `
+          <div class="report-passport-item">
+            <div class="report-passport-label">${escapeHtml(item.label)}</div>
+            <div class="report-passport-value">${escapeHtml(item.value)}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function groupByCategory(items) {
   const grouped = {};
 
@@ -857,6 +958,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const topUnitsByRisk = getUnitRanking(grouped, "risk", 6);
   const recommendations = getRecommendations(unitItems, grouped);
   const commanderSummary = getCommanderSummary(unitItems, grouped);
+  const reportPassport = getReportPassport(unitItems, grouped);
 
   let html = `
     <div class="analysis-grid">
@@ -924,6 +1026,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
       </div>
     </div>
 
+    ${renderReportPassport(reportPassport)}
     ${renderRecommendations(recommendations)}
     ${renderCommanderSummary(commanderSummary)}
   `;
