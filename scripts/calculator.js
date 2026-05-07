@@ -14,6 +14,7 @@ const sortFilter = document.getElementById("sortFilter");
 const actionPriorityFilter = document.getElementById("actionPriorityFilter");
 const actionLongOnly = document.getElementById("actionLongOnly");
 const actionStatusFilter = document.getElementById("actionStatusFilter");
+const exportDecisionPackageBtn = document.getElementById("exportDecisionPackageBtn");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
@@ -28,6 +29,7 @@ sortFilter.addEventListener("change", applyFilters);
 if (actionPriorityFilter) actionPriorityFilter.addEventListener("change", applyFilters);
 if (actionLongOnly) actionLongOnly.addEventListener("change", applyFilters);
 if (actionStatusFilter) actionStatusFilter.addEventListener("change", applyFilters);
+if (exportDecisionPackageBtn) exportDecisionPackageBtn.addEventListener("click", exportDecisionPackage);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -64,6 +66,7 @@ function analyzeWorkbook() {
   document.getElementById("exportExcelBtn").disabled = false;
   document.getElementById("exportPdfBtn").disabled = false;
   if (exportStatusesBtn) exportStatusesBtn.disabled = false;
+  if (exportDecisionPackageBtn) exportDecisionPackageBtn.disabled = false;
 
   if (typeof setStatus === "function") {
     setStatus(`Проаналізовано: ${unitItems.length} рядків`, "ok");
@@ -2049,6 +2052,181 @@ function renderExchangeActionPlan(plan) {
     </div>
   `;
 }
+
+
+function buildDecisionPackagePayload() {
+  const items = typeof getCurrentFilteredItems === "function"
+    ? getCurrentFilteredItems()
+    : (window.ArtAmmoState?.unitItems || []);
+
+  const grouped = groupByUnit(items);
+  const threshold = getLowBalanceThreshold();
+  const passport = window.ArtAmmoState?.reportPassport || getReportPassport(items);
+  const commanderSummary = getCommanderSummary(items, grouped);
+  const recommendations = getRecommendations(items, grouped);
+  const exchangeRecommendations = getFilteredExchangeRecommendations(
+    window.ArtAmmoState?.unitItems || items,
+    threshold,
+    50
+  );
+  const actionPlan = getFilteredExchangeActionPlan(exchangeRecommendations);
+  const actionIntegrity = getActionStatusIntegrity(actionPlan);
+
+  const totals = {
+    units: Object.keys(grouped).length,
+    rows: items.length,
+    combinations: new Set(items.map(item => item.combination)).size,
+    received: items.reduce((sum, item) => sum + Number(item.received || 0), 0),
+    spent: items.reduce((sum, item) => sum + Number(item.spent || 0), 0),
+    balance: items.reduce((sum, item) => sum + Number(item.balance || 0), 0),
+    longRangeBalance: items.filter(item => item.longRange).reduce((sum, item) => sum + Number(item.balance || 0), 0),
+    zeroPositions: items.filter(item => Number(item.balance || 0) === 0).length,
+    lowPositions: items.filter(item => Number(item.balance || 0) > 0 && Number(item.balance || 0) <= threshold).length,
+    lowBalanceThreshold: threshold
+  };
+
+  return {
+    app: "Art Ammo",
+    type: "decision-package",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    passport,
+    totals,
+    commanderSummary,
+    recommendations,
+    exchangeRecommendations,
+    actionPlan,
+    actionStatusIntegrity: actionIntegrity,
+    actionStatuses: getAllActionStatuses(),
+    filteredRows: items.map(item => ({
+      unit: item.unit,
+      row: item.row,
+      category: item.category,
+      projectile: item.projectile,
+      charge: item.charge,
+      note: item.note,
+      rangeMeters: item.rangeMeters,
+      rangeKm: item.rangeKm,
+      longRange: item.longRange,
+      received: item.received,
+      spent: item.spent,
+      balance: item.balance,
+      combination: item.combination
+    }))
+  };
+}
+
+function decisionPackageText(payload) {
+  const lines = [];
+
+  lines.push("ART AMMO — ПАКЕТ РІШЕННЯ");
+  lines.push("================================");
+  lines.push(`Сформовано: ${new Date(payload.exportedAt).toLocaleString("uk-UA")}`);
+  lines.push(`Файл: ${payload.passport?.fileName || "—"}`);
+  lines.push(`Активні фільтри: ${payload.passport?.filters || "—"}`);
+  lines.push(`Поріг малого залишку: ${payload.totals.lowBalanceThreshold}`);
+  lines.push("");
+  lines.push("КЛЮЧОВІ ПОКАЗНИКИ");
+  lines.push(`Підрозділів: ${payload.totals.units}`);
+  lines.push(`Рядків: ${payload.totals.rows}`);
+  lines.push(`Комбінацій: ${payload.totals.combinations}`);
+  lines.push(`Отримання: ${payload.totals.received}`);
+  lines.push(`Витрата: ${payload.totals.spent}`);
+  lines.push(`Залишок: ${payload.totals.balance}`);
+  lines.push(`Далекобійних: ${payload.totals.longRangeBalance}`);
+  lines.push(`Нульових позицій: ${payload.totals.zeroPositions}`);
+  lines.push(`Малих залишків: ${payload.totals.lowPositions}`);
+  lines.push("");
+  lines.push("КОРОТКИЙ КОМАНДИРСЬКИЙ ВИСНОВОК");
+  (payload.commanderSummary || []).forEach(item => {
+    lines.push(`- ${item.label}: ${item.text}`);
+  });
+  lines.push("");
+  lines.push("ЖУРНАЛ РЕКОМЕНДОВАНИХ ДІЙ");
+  if (!payload.actionPlan?.length) {
+    lines.push("Рекомендовані дії відсутні за поточними фільтрами.");
+  } else {
+    payload.actionPlan.forEach(item => {
+      lines.push(`${item.order}. [${item.priority}] ${item.action} | ${item.fromUnit} → ${item.toUnit} | ${item.statusLabel || item.status}`);
+      lines.push(`   Було: ${item.before}; буде: ${item.after}; ризик: ${item.risk}`);
+    });
+  }
+
+  return lines.join("\n");
+}
+
+function toCsv(rows, columns) {
+  const escape = value => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  return [
+    columns.map(col => escape(col.label)).join(";"),
+    ...rows.map(row => columns.map(col => escape(row[col.key])).join(";"))
+  ].join("\n");
+}
+
+async function exportDecisionPackage() {
+  const items = typeof getCurrentFilteredItems === "function"
+    ? getCurrentFilteredItems()
+    : (window.ArtAmmoState?.unitItems || []);
+
+  if (!items.length) {
+    alert("Немає даних для пакета рішення. Спочатку завантаж і проаналізуй Excel.");
+    return;
+  }
+
+  const payload = buildDecisionPackagePayload();
+  const fileDate = new Date().toISOString().slice(0, 10);
+  const baseName = `art_ammo_decision_package_${fileDate}`;
+
+  const actionCsv = toCsv(payload.actionPlan || [], [
+    { key: "order", label: "№" },
+    { key: "priority", label: "Пріоритет" },
+    { key: "action", label: "Дія" },
+    { key: "fromUnit", label: "Звідки" },
+    { key: "toUnit", label: "Куди" },
+    { key: "before", label: "Було" },
+    { key: "after", label: "Буде" },
+    { key: "risk", label: "Ризик" },
+    { key: "status", label: "Статус" }
+  ]);
+
+  if (window.JSZip) {
+    const zip = new JSZip();
+    zip.file("decision_package.json", JSON.stringify(payload, null, 2));
+    zip.file("commander_summary.txt", decisionPackageText(payload));
+    zip.file("action_log.csv", "\ufeff" + actionCsv);
+    zip.file("action_statuses.json", JSON.stringify({
+      app: "Art Ammo",
+      type: "action-statuses",
+      exportedAt: payload.exportedAt,
+      statuses: payload.actionStatuses
+    }, null, 2));
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${baseName}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json;charset=utf-8"
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${baseName}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+window.exportDecisionPackage = exportDecisionPackage;
 
 function getRowClass(item) {
   const balance = Number(item?.balance || 0);
