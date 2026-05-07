@@ -601,3 +601,71 @@ tr.row-long:hover td {
     flex-direction: column;
   }
 }
+
+/* v11: короткий командирський висновок */
+.commander-summary-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(52, 211, 153, 0.13), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  box-shadow: 0 0 28px rgba(0,0,0,0.22);
+}
+
+.commander-summary-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.commander-summary-header h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.commander-summary-header span {
+  color: rgba(255,255,255,0.62);
+  font-size: 13px;
+}
+
+.commander-summary-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.commander-summary-row {
+  padding: 13px 14px;
+  border-radius: 15px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.commander-summary-label {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(52, 211, 153, 0.95);
+  margin-bottom: 7px;
+}
+
+.commander-summary-text {
+  color: rgba(255,255,255,0.82);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@media (max-width: 980px) {
+  .commander-summary-list {
+    grid-template-columns: 1fr;
+  }
+
+  .commander-summary-header {
+    flex-direction: column;
+  }
+}
