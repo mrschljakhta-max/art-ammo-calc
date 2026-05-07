@@ -1,10 +1,108 @@
+.bastion-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px;
+}
+
+.bastion-sidebar {
+  position: sticky;
+  top: 18px;
+  height: calc(100vh - 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(9, 13, 20, 0.96), rgba(5, 7, 11, 0.88));
+  box-shadow: 0 24px 80px rgba(0,0,0,0.42);
+  overflow: auto;
+}
+
+.bastion-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bastion-topbar {
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(7, 11, 17, 0.82);
+  backdrop-filter: blur(18px);
+}
+
+.command-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 16px;
+  align-items: start;
+}
+
+.context-panel {
+  position: sticky;
+  top: 108px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .app-container {
   width: 100%;
   min-height: 100vh;
+}
 
-  display: flex;
-  justify-content: center;
-  align-items: center;
+@media (max-width: 1280px) {
+  .bastion-shell {
+    grid-template-columns: 94px minmax(0, 1fr);
+  }
 
-  padding: 40px;
+  .brand-card div:not(.brand-mark-wrap),
+  .sidebar-section-label,
+  .mode-link span:last-child,
+  .system-card {
+    display: none;
+  }
+
+  .mode-link {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 1040px) {
+  .bastion-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .bastion-sidebar,
+  .context-panel {
+    position: static;
+    height: auto;
+  }
+
+  .bastion-sidebar {
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+  }
+
+  .mode-nav {
+    display: flex;
+    flex-direction: row;
+    min-width: max-content;
+  }
+
+  .command-grid,
+  .bastion-topbar {
+    grid-template-columns: 1fr;
+  }
 }
