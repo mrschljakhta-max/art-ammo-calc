@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.33</div>
+      <div class="core-version">BASTION CORE v0.34</div>
     </aside>
 
     <main class="bastion-main">
@@ -145,26 +145,41 @@
 
             <div id="fileInfo" class="file-info"></div>
 
-            <div class="dashboard-grid-preview">
-              <div class="preview-card">
-                <span>01</span>
-                <strong>Імпорт</strong>
-                <p>Excel читається локально в браузері.</p>
+            <div class="dashboard-kpi-grid">
+              <div class="kpi-card kpi-red">
+                <div class="kpi-label">Загальний залишок</div>
+                <div class="kpi-value" id="dashTotalBalance">—</div>
+                <div class="kpi-sub">по підрозділах</div>
               </div>
-              <div class="preview-card">
-                <span>02</span>
-                <strong>Аналітика</strong>
-                <p>Залишки, дальність, вузькі місця.</p>
+              <div class="kpi-card kpi-blue">
+                <div class="kpi-label">Далекобійних</div>
+                <div class="kpi-value" id="dashLongRange">—</div>
+                <div class="kpi-sub">позначені системою</div>
               </div>
-              <div class="preview-card">
-                <span>03</span>
-                <strong>Обмін</strong>
-                <p>Рекомендації передачі між підрозділами.</p>
+              <div class="kpi-card kpi-amber">
+                <div class="kpi-label">Критичні позиції</div>
+                <div class="kpi-value" id="dashCriticalCount">—</div>
+                <div class="kpi-sub">нульові + малі</div>
               </div>
-              <div class="preview-card">
-                <span>04</span>
-                <strong>Звіти</strong>
-                <p>PDF, Excel, пакет рішення.</p>
+              <div class="kpi-card kpi-green">
+                <div class="kpi-label">Підрозділів</div>
+                <div class="kpi-value" id="dashUnitCount">—</div>
+                <div class="kpi-sub">активних аркушів</div>
+              </div>
+            </div>
+
+            <div class="dashboard-ops-grid">
+              <div class="ops-card">
+                <div class="ops-title">Стан аналізу</div>
+                <div class="ops-row"><span>Файл</span><strong id="dashFileState">очікується</strong></div>
+                <div class="ops-row"><span>Останній аналіз</span><strong id="dashLastAnalysis">—</strong></div>
+                <div class="ops-row"><span>Рядків</span><strong id="dashRowsCount">—</strong></div>
+              </div>
+              <div class="ops-card">
+                <div class="ops-title">Командирський огляд</div>
+                <div class="ops-row"><span>Рекомендацій обміну</span><strong id="dashExchangeCount">—</strong></div>
+                <div class="ops-row"><span>Проблем якості</span><strong id="dashQualityIssues">—</strong></div>
+                <div class="ops-row"><span>Статус</span><strong id="dashReadinessState">очікує файл</strong></div>
               </div>
             </div>
           </section>
@@ -184,8 +199,9 @@
               <strong>не зберігаються в хмарі</strong>
             </div>
             <div class="context-note">
-              Завантаж Excel-файл — система автоматично запустить аналіз. Результати відкрий у вкладках “Аналітика”, “Обмін”, “Довідники”, “Якість даних” або “Звіти”.
+              Завантаж Excel-файл — система автоматично запустить аналіз. Дашборд оновить ключові показники, а детальні блоки залишаються у відповідних режимах.
             </div>
+            <button class="context-action" data-view="analytics">Перейти до аналітики</button>
           </aside>
         </section>
       </section>
@@ -314,7 +330,8 @@
             </div>
             <div class="panel-badge">IMPORT</div>
           </div>
-          <div class="context-note">Основне завантаження поки доступне на Dashboard. Далі винесемо імпорт сюди окремим майстром.</div>
+          <div class="context-note">Імпорт уже доступний на Dashboard. Наступним кроком сюди винесемо окремий майстер перевірки структури Excel, схеми колонок і попередньої валідації файлу.</div>
+          <button class="context-action" data-view="dashboard">Повернутися до завантаження</button>
         </section>
       </section>
 
