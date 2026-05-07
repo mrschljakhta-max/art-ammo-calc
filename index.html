@@ -73,6 +73,14 @@
         </button>
       </nav>
 
+      <div class="side-section-title">System</div>
+      <nav class="side-nav">
+        <button class="side-nav-item" data-view="settings">
+          <span class="nav-icon">⚙</span>
+          <span>Налаштування</span>
+        </button>
+      </nav>
+
       <div class="system-card">
         <div class="system-status-dot"></div>
         <div>
@@ -81,7 +89,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.32</div>
+      <div class="core-version">BASTION CORE v0.33</div>
     </aside>
 
     <main class="bastion-main">
@@ -91,6 +99,7 @@
           <button class="top-tab" data-view="analytics">Analytics</button>
           <button class="top-tab" data-view="exchange">Exchange</button>
           <button class="top-tab" data-view="dicts">Dictionaries</button>
+          <button class="top-tab" data-view="quality">Quality</button>
           <button class="top-tab" data-view="reports">Reports</button>
           <button class="top-tab" data-view="settings">Settings</button>
         </div>
@@ -104,36 +113,92 @@
         </div>
       </header>
 
-      <section class="workspace-grid">
-        <section class="command-panel primary-panel">
-          <div class="panel-header">
-            <div>
-              <h1>BASTION</h1>
-              <p>Платформа аналізу комплектів та залишків</p>
+      <section class="view-panel is-active" data-view-panel="dashboard">
+        <section class="workspace-grid">
+          <section class="command-panel primary-panel dashboard-hero">
+            <div class="panel-header">
+              <div>
+                <h1>BASTION</h1>
+                <p>Платформа аналізу комплектів, залишків і рішень по обміну.</p>
+              </div>
+              <div class="panel-badge">COMMAND MODE</div>
             </div>
-            <div class="panel-badge">COMMAND MODE</div>
+
+            <div class="upload-zone">
+              <label class="upload-button">
+                Завантажити Excel
+                <input type="file" id="excelFile" accept=".xlsx,.xls" hidden>
+              </label>
+
+              <button id="analyzeBtn" class="analyze-button" disabled>
+                Аналізувати файл
+              </button>
+
+              <button id="exportExcelBtn" class="analyze-button" disabled>
+                Експорт Excel
+              </button>
+
+              <button id="exportPdfBtn" class="analyze-button" disabled>
+                PDF-звіт
+              </button>
+            </div>
+
+            <div id="fileInfo" class="file-info"></div>
+
+            <div class="dashboard-grid-preview">
+              <div class="preview-card">
+                <span>01</span>
+                <strong>Імпорт</strong>
+                <p>Excel читається локально в браузері.</p>
+              </div>
+              <div class="preview-card">
+                <span>02</span>
+                <strong>Аналітика</strong>
+                <p>Залишки, дальність, вузькі місця.</p>
+              </div>
+              <div class="preview-card">
+                <span>03</span>
+                <strong>Обмін</strong>
+                <p>Рекомендації передачі між підрозділами.</p>
+              </div>
+              <div class="preview-card">
+                <span>04</span>
+                <strong>Звіти</strong>
+                <p>PDF, Excel, пакет рішення.</p>
+              </div>
+            </div>
+          </section>
+
+          <aside class="command-panel context-panel">
+            <div class="context-title">Оперативний контекст</div>
+            <div class="context-metric">
+              <span>Файл</span>
+              <strong id="contextFileState">очікується</strong>
+            </div>
+            <div class="context-metric">
+              <span>Режим</span>
+              <strong>локальний аналіз</strong>
+            </div>
+            <div class="context-metric">
+              <span>Дані</span>
+              <strong>не зберігаються в хмарі</strong>
+            </div>
+            <div class="context-note">
+              Завантаж Excel-файл — система автоматично запустить аналіз. Результати відкрий у вкладках “Аналітика”, “Обмін”, “Довідники”, “Якість даних” або “Звіти”.
+            </div>
+          </aside>
+        </section>
+      </section>
+
+      <section class="view-panel" data-view-panel="analytics">
+        <section class="command-panel primary-panel">
+          <div class="panel-header compact-header">
+            <div>
+              <h2>Аналітика залишків</h2>
+              <p>Фільтри, таблиці, вузькі місця, рейтинги й командирський висновок.</p>
+            </div>
+            <div class="panel-badge">ANALYTICS</div>
           </div>
-
-          <div class="upload-zone">
-            <label class="upload-button">
-              Завантажити Excel
-              <input type="file" id="excelFile" accept=".xlsx,.xls" hidden>
-            </label>
-
-            <button id="analyzeBtn" class="analyze-button" disabled>
-              Аналізувати файл
-            </button>
-
-            <button id="exportExcelBtn" class="analyze-button" disabled>
-              Експорт Excel
-            </button>
-
-            <button id="exportPdfBtn" class="analyze-button" disabled>
-              PDF-звіт
-            </button>
-          </div>
-
-          <div id="fileInfo" class="file-info"></div>
 
           <div class="filters-panel" id="filtersPanel" hidden>
             <select id="unitFilter" class="filter-control">
@@ -160,34 +225,120 @@
           <div id="filterStatus" class="filter-status" hidden></div>
         </section>
 
-        <aside class="command-panel context-panel">
-          <div class="context-title">Оперативний контекст</div>
-          <div class="context-metric">
-            <span>Файл</span>
-            <strong id="contextFileState">очікується</strong>
-          </div>
-          <div class="context-metric">
-            <span>Режим</span>
-            <strong>локальний аналіз</strong>
-          </div>
-          <div class="context-metric">
-            <span>Дані</span>
-            <strong>не зберігаються в хмарі</strong>
-          </div>
-          <div class="context-note">
-            Завантаж Excel-файл — система автоматично запустить аналіз, побудує підсумки, рекомендації та експортні звіти.
-          </div>
-        </aside>
+        <section class="workspace-grid lower-grid analytics-layout">
+          <section class="command-panel sheets-panel">
+            <div class="context-title">Аркуші Excel</div>
+            <div id="sheetList"></div>
+          </section>
+
+          <section class="command-panel analysis-panel-shell">
+            <div id="analysisPanel"></div>
+          </section>
+        </section>
       </section>
 
-      <section class="workspace-grid lower-grid">
-        <section class="command-panel sheets-panel">
-          <div class="context-title">Аркуші Excel</div>
-          <div id="sheetList"></div>
+      <section class="view-panel" data-view-panel="exchange">
+        <section class="command-panel primary-panel mode-placeholder">
+          <div class="panel-header compact-header">
+            <div>
+              <h2>Exchange Center</h2>
+              <p>Окремий режим для рекомендацій обміну, журналу дій, статусів і очікуваного ефекту.</p>
+            </div>
+            <div class="panel-badge">EXCHANGE</div>
+          </div>
+          <div class="placeholder-grid">
+            <div class="preview-card"><strong>Рекомендації</strong><p>Донор → отримувач, комбінація, кількість.</p></div>
+            <div class="preview-card"><strong>Ефект</strong><p>Що закривається після передачі.</p></div>
+            <div class="preview-card"><strong>Журнал</strong><p>Заплановано / виконано / відхилено.</p></div>
+          </div>
         </section>
+      </section>
 
-        <section class="command-panel analysis-panel-shell">
-          <div id="analysisPanel"></div>
+      <section class="view-panel" data-view-panel="dicts">
+        <section class="command-panel primary-panel mode-placeholder">
+          <div class="panel-header compact-header">
+            <div>
+              <h2>Довідники</h2>
+              <p>Снаряди, заряди, комбінації, alias-словник і підозрілі назви.</p>
+            </div>
+            <div class="panel-badge">DICTIONARIES</div>
+          </div>
+          <div class="placeholder-grid">
+            <div class="preview-card"><strong>Снаряди</strong><p>Канонічні назви та варіанти написання.</p></div>
+            <div class="preview-card"><strong>Заряди</strong><p>Нормалізація й контроль дублів.</p></div>
+            <div class="preview-card"><strong>Комбінації</strong><p>Дальність, далекобійність, залишки.</p></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view-panel" data-view-panel="quality">
+        <section class="command-panel primary-panel mode-placeholder">
+          <div class="panel-header compact-header">
+            <div>
+              <h2>Якість даних</h2>
+              <p>Контроль Excel-файлу: дублікати, формули, від’ємні значення, розбіжності.</p>
+            </div>
+            <div class="panel-badge">QUALITY</div>
+          </div>
+          <div class="placeholder-grid">
+            <div class="preview-card"><strong>Помилки</strong><p>Некоректні рядки й від’ємні значення.</p></div>
+            <div class="preview-card"><strong>Попередження</strong><p>Нульова дальність, дублікати, підозрілі записи.</p></div>
+            <div class="preview-card"><strong>Звірка</strong><p>Підрозділи проти зведеного аркуша.</p></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view-panel" data-view-panel="reports">
+        <section class="command-panel primary-panel mode-placeholder">
+          <div class="panel-header compact-header">
+            <div>
+              <h2>Звіти та пакети рішень</h2>
+              <p>PDF, Excel, decision package, commander summary і статуси дій.</p>
+            </div>
+            <div class="panel-badge">REPORTS</div>
+          </div>
+          <div class="placeholder-grid">
+            <div class="preview-card"><strong>PDF-звіт</strong><p>Короткий висновок + таблиці.</p></div>
+            <div class="preview-card"><strong>Excel</strong><p>Підсумок, детально, підрозділи.</p></div>
+            <div class="preview-card"><strong>Decision Package</strong><p>JSON/ZIP для передачі та відновлення.</p></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view-panel" data-view-panel="imports">
+        <section class="command-panel primary-panel mode-placeholder">
+          <div class="panel-header compact-header">
+            <div>
+              <h2>Імпорт</h2>
+              <p>Окремий режим для завантаження Excel, перевірки структури та попереднього перегляду аркушів.</p>
+            </div>
+            <div class="panel-badge">IMPORT</div>
+          </div>
+          <div class="context-note">Основне завантаження поки доступне на Dashboard. Далі винесемо імпорт сюди окремим майстром.</div>
+        </section>
+      </section>
+
+      <section class="view-panel" data-view-panel="history">
+        <section class="command-panel primary-panel mode-placeholder">
+          <div class="panel-header compact-header">
+            <div>
+              <h2>Історія</h2>
+              <p>Майбутній режим для динаміки, порівняння файлів і історії рішень.</p>
+            </div>
+            <div class="panel-badge">HISTORY</div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view-panel" data-view-panel="settings">
+        <section class="command-panel primary-panel mode-placeholder">
+          <div class="panel-header compact-header">
+            <div>
+              <h2>Налаштування</h2>
+              <p>Пороги, схема Excel, ролі, профілі логіки та параметри експорту.</p>
+            </div>
+            <div class="panel-badge">SETTINGS</div>
+          </div>
         </section>
       </section>
     </main>
