@@ -54,6 +54,10 @@ function handleExcel(event) {
     document.getElementById("analyzeBtn").disabled = false;
 
     renderSheets(currentWorkbook);
+
+    if (typeof analyzeWorkbook === "function") {
+      analyzeWorkbook();
+    }
   };
 
   reader.readAsArrayBuffer(file);
