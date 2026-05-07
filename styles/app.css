@@ -1340,3 +1340,204 @@ tr:hover td {
   .quality-table-head,
   .quality-table-row { grid-template-columns: 1fr; }
 }
+
+/* BASTION v0.40 — History Center */
+.history-center {
+  position: relative;
+  overflow: hidden;
+}
+
+.history-command-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  align-items: center;
+}
+
+.history-import-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.danger-button {
+  border-color: rgba(255, 45, 45, 0.35) !important;
+  color: #ff5b64 !important;
+}
+
+.history-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.history-file-kpi {
+  font-size: 18px !important;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.history-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.history-panel {
+  position: relative;
+  min-height: 280px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.018)),
+    radial-gradient(circle at top right, rgba(255, 48, 64, 0.13), transparent 42%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.025), 0 18px 48px rgba(0,0,0,0.24);
+  overflow: hidden;
+}
+
+.history-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.035), transparent);
+  transform: translateX(-120%);
+  animation: historyScan 7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes historyScan {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+.history-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.history-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.history-timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.075);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.035);
+}
+
+.history-timeline-item.is-latest {
+  border-color: rgba(255,45,45,0.28);
+  box-shadow: 0 0 22px rgba(255,45,45,0.09);
+}
+
+.history-time-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 4px;
+  border-radius: 99px;
+  background: var(--red);
+  box-shadow: 0 0 16px rgba(255,45,45,0.75);
+}
+
+.history-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.history-row-head span {
+  color: var(--red);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.history-file-name {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.58);
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.history-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.history-mini-grid span {
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.22);
+  color: rgba(255,255,255,0.62);
+  font-size: 11px;
+}
+
+.history-mini-grid b {
+  color: var(--text);
+}
+
+.history-compare-panel {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-compare-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.035);
+}
+
+.history-compare-row span {
+  color: rgba(255,255,255,0.68);
+}
+
+.history-compare-row strong {
+  color: var(--text);
+}
+
+.history-compare-row em {
+  min-width: 72px;
+  text-align: right;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.history-compare-row.up em { color: var(--amber); }
+.history-compare-row.down em { color: var(--green); }
+.history-compare-row.same em { color: rgba(255,255,255,0.42); }
+
+@media (max-width: 1200px) {
+  .history-kpi-grid,
+  .history-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-mini-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
