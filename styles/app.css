@@ -1145,3 +1145,27 @@ tr.row-long:hover td {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.hero-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.version-pill {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(88, 101, 242, 0.12);
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  color: rgba(255,255,255,0.82);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.report-passport-item:nth-child(2),
+.report-passport-item:nth-child(3),
+.report-passport-item:nth-child(4) {
+  border-color: rgba(88, 101, 242, 0.22);
+  background: rgba(88, 101, 242, 0.06);
+}
