@@ -81,6 +81,7 @@
             "№": item.order,
             "Пріоритет": item.priority,
             "Рівень ризику": item.risk,
+            "Статус": item.status === "done" ? "Виконано" : item.status === "rejected" ? "Відхилено" : "Заплановано",
             "Дія": item.action,
             "Звідки": item.fromUnit,
             "Куди": item.toUnit,

@@ -11,6 +11,7 @@ const stockFilter = document.getElementById("stockFilter");
 const sortFilter = document.getElementById("sortFilter");
 const actionPriorityFilter = document.getElementById("actionPriorityFilter");
 const actionLongOnly = document.getElementById("actionLongOnly");
+const actionStatusFilter = document.getElementById("actionStatusFilter");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
@@ -22,6 +23,7 @@ stockFilter.addEventListener("change", applyFilters);
 sortFilter.addEventListener("change", applyFilters);
 if (actionPriorityFilter) actionPriorityFilter.addEventListener("change", applyFilters);
 if (actionLongOnly) actionLongOnly.addEventListener("change", applyFilters);
+if (actionStatusFilter) actionStatusFilter.addEventListener("change", applyFilters);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -574,6 +576,12 @@ function getActionFilterDescription() {
     parts.push("тільки далекобійні");
   }
 
+  const status = actionStatusFilter?.value || "all";
+  if (status !== "all") {
+    const labels = { planned: "заплановано", done: "виконано", rejected: "відхилено" };
+    parts.push(`статус: ${labels[status] || status}`);
+  }
+
   return parts.length ? parts.join(", ") : "усі дії";
 }
 
@@ -1074,6 +1082,7 @@ function resetFilters() {
   sortFilter.value = "default";
   if (actionPriorityFilter) actionPriorityFilter.value = "all";
   if (actionLongOnly) actionLongOnly.checked = false;
+  if (actionStatusFilter) actionStatusFilter.value = "all";
   applyFilters();
 }
 
@@ -1695,9 +1704,14 @@ function getFilteredExchangeRecommendations(items, threshold = 10, limit = 12) {
 function getFilteredExchangeActionPlan(recommendations) {
   let plan = getExchangeActionPlan(recommendations);
   const priority = actionPriorityFilter?.value || "all";
+  const status = actionStatusFilter?.value || "all";
 
   if (priority !== "all") {
     plan = plan.filter(item => item.priority === priority);
+  }
+
+  if (status !== "all") {
+    plan = plan.filter(item => item.status === status);
   }
 
   return plan;
@@ -1726,8 +1740,12 @@ function getExchangeActionPlan(recommendations) {
       risk += " / контроль донора";
     }
 
+    const actionId = getActionId(item);
+
     return {
       order: index + 1,
+      actionId,
+      status: getActionStatus(actionId),
       priority,
       risk,
       action: `Передати ${item.recommendedQty} од. ${item.projectile} (${item.charge})`,
@@ -1741,6 +1759,42 @@ function getExchangeActionPlan(recommendations) {
     };
   });
 }
+
+function getActionId(item) {
+  return [
+    item.projectile,
+    item.charge,
+    item.fromUnit,
+    item.toUnit,
+    item.recommendedQty
+  ].map(part => String(part ?? "").trim()).join("|");
+}
+
+function getActionStatus(actionId) {
+  try {
+    const statuses = JSON.parse(localStorage.getItem("artAmmoActionStatuses") || "{}");
+    return statuses[actionId] || "planned";
+  } catch (error) {
+    return "planned";
+  }
+}
+
+function setActionStatus(actionId, status) {
+  try {
+    const statuses = JSON.parse(localStorage.getItem("artAmmoActionStatuses") || "{}");
+    statuses[actionId] = status;
+    localStorage.setItem("artAmmoActionStatuses", JSON.stringify(statuses));
+  } catch (error) {
+    console.warn("Не вдалося зберегти статус дії", error);
+  }
+}
+
+function updateActionStatus(actionId, status) {
+  setActionStatus(actionId, status);
+  applyFilters();
+}
+
+window.updateActionStatus = updateActionStatus;
 
 function renderExchangeActionPlan(plan) {
   if (!plan || !plan.length) return "";
@@ -1764,6 +1818,7 @@ function renderExchangeActionPlan(plan) {
               <th>Було</th>
               <th>Буде</th>
               <th>Ризик</th>
+              <th>Статус</th>
             </tr>
           </thead>
           <tbody>
@@ -1777,6 +1832,13 @@ function renderExchangeActionPlan(plan) {
                 <td>${escapeHtml(item.before)}</td>
                 <td>${escapeHtml(item.after)}</td>
                 <td>${escapeHtml(item.risk)}</td>
+                <td>
+                  <select class="action-status-select status-${item.status}" data-action-id="${escapeHtml(item.actionId)}" onchange="updateActionStatus(this.dataset.actionId, this.value)">
+                    <option value="planned" ${item.status === "planned" ? "selected" : ""}>Заплановано</option>
+                    <option value="done" ${item.status === "done" ? "selected" : ""}>Виконано</option>
+                    <option value="rejected" ${item.status === "rejected" ? "selected" : ""}>Відхилено</option>
+                  </select>
+                </td>
               </tr>
             `).join("")}
           </tbody>
