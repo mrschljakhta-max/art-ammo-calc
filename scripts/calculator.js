@@ -8,6 +8,7 @@ const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 const filterStatus = document.getElementById("filterStatus");
 const lowBalanceThreshold = document.getElementById("lowBalanceThreshold");
 const stockFilter = document.getElementById("stockFilter");
+const sortFilter = document.getElementById("sortFilter");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
@@ -16,6 +17,7 @@ searchFilter.addEventListener("input", applyFilters);
 resetFiltersBtn.addEventListener("click", resetFilters);
 lowBalanceThreshold.addEventListener("input", applyFilters);
 stockFilter.addEventListener("change", applyFilters);
+sortFilter.addEventListener("change", applyFilters);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -47,7 +49,6 @@ function analyzeWorkbook() {
   window.ArtAmmoState.groupedByUnit = grouped;
 
   setupFilters(grouped);
-  updateFilterStatus(unitItems);
 
   document.getElementById("exportExcelBtn").disabled = false;
   document.getElementById("exportPdfBtn").disabled = false;
@@ -56,7 +57,9 @@ function analyzeWorkbook() {
     setStatus(`Проаналізовано: ${unitItems.length} рядків`, "ok");
   }
 
-  renderAnalysis(unitItems, unitItems, summaryItems, grouped);
+  const initialItems = getCurrentFilteredItems();
+  updateFilterStatus(initialItems);
+  renderAnalysis(initialItems, initialItems, summaryItems, groupByUnit(initialItems));
 }
 
 function parseStructuredSheet(sheetName, rows) {
@@ -364,7 +367,44 @@ function getCurrentFilteredItems() {
     );
   }
 
-  return filtered;
+  return sortItems(filtered);
+}
+
+function sortItems(items) {
+  const sorted = [...items];
+  const mode = sortFilter?.value || "default";
+
+  const byText = (a, b, key) =>
+    String(a[key] || "").localeCompare(String(b[key] || ""), "uk", { numeric: true });
+
+  const byNumber = (a, b, key) =>
+    Number(a[key] || 0) - Number(b[key] || 0);
+
+  if (mode === "balanceAsc") {
+    sorted.sort((a, b) => byNumber(a, b, "balance") || byText(a, b, "unit"));
+  }
+
+  if (mode === "balanceDesc") {
+    sorted.sort((a, b) => byNumber(b, a, "balance") || byText(a, b, "unit"));
+  }
+
+  if (mode === "rangeDesc") {
+    sorted.sort((a, b) => byNumber(b, a, "rangeKm") || byNumber(b, a, "balance"));
+  }
+
+  if (mode === "rangeAsc") {
+    sorted.sort((a, b) => byNumber(a, b, "rangeKm") || byNumber(a, b, "balance"));
+  }
+
+  if (mode === "unitAsc") {
+    sorted.sort((a, b) => byText(a, b, "unit") || byText(a, b, "projectile"));
+  }
+
+  if (mode === "projectileAsc") {
+    sorted.sort((a, b) => byText(a, b, "projectile") || byText(a, b, "charge"));
+  }
+
+  return sorted;
 }
 
 function resetFilters() {
@@ -373,6 +413,7 @@ function resetFilters() {
   searchFilter.value = "";
   lowBalanceThreshold.value = "10";
   stockFilter.value = "all";
+  sortFilter.value = "default";
   applyFilters();
 }
 
@@ -402,6 +443,19 @@ function updateFilterStatus(items) {
 
   if (stockFilter.value !== "all") {
     active.push(stockFilterLabels[stockFilter.value] || "фільтр залишків");
+  }
+
+  const sortLabels = {
+    balanceAsc: "залишок ↑",
+    balanceDesc: "залишок ↓",
+    rangeDesc: "дальність ↓",
+    rangeAsc: "дальність ↑",
+    unitAsc: "підрозділ А-Я",
+    projectileAsc: "снаряд А-Я"
+  };
+
+  if (sortFilter.value !== "default") {
+    active.push(`сортування: ${sortLabels[sortFilter.value] || sortFilter.value}`);
   }
 
   active.push(`малий залишок ≤${getLowBalanceThreshold()}`);
