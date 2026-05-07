@@ -15,6 +15,7 @@ const actionPriorityFilter = document.getElementById("actionPriorityFilter");
 const actionLongOnly = document.getElementById("actionLongOnly");
 const actionStatusFilter = document.getElementById("actionStatusFilter");
 const exportDecisionPackageBtn = document.getElementById("exportDecisionPackageBtn");
+const importDecisionPackageFile = document.getElementById("importDecisionPackageFile");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
@@ -30,6 +31,7 @@ if (actionPriorityFilter) actionPriorityFilter.addEventListener("change", applyF
 if (actionLongOnly) actionLongOnly.addEventListener("change", applyFilters);
 if (actionStatusFilter) actionStatusFilter.addEventListener("change", applyFilters);
 if (exportDecisionPackageBtn) exportDecisionPackageBtn.addEventListener("click", exportDecisionPackage);
+if (importDecisionPackageFile) importDecisionPackageFile.addEventListener("change", importDecisionPackageFromFile);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -2115,6 +2117,153 @@ function buildDecisionPackagePayload() {
     }))
   };
 }
+
+
+function getImportedDecisionPackageInfo() {
+  const payload = window.ArtAmmoState?.importedDecisionPackage;
+
+  if (!payload) return null;
+
+  const exportedAt = payload.exportedAt
+    ? new Date(payload.exportedAt).toLocaleString("uk-UA")
+    : "—";
+
+  const statusesCount = payload.actionStatuses
+    ? Object.keys(payload.actionStatuses).length
+    : payload.statuses
+      ? Object.keys(payload.statuses).length
+      : 0;
+
+  return {
+    type: payload.type || "невідомий тип",
+    exportedAt,
+    sourceFileName: payload.passport?.fileName || payload.sourceFileName || "—",
+    actionCount: Array.isArray(payload.actionPlan) ? payload.actionPlan.length : 0,
+    statusesCount
+  };
+}
+
+function renderImportedDecisionPackageInfo() {
+  const info = getImportedDecisionPackageInfo();
+
+  if (!info) return "";
+
+  return `
+    <div class="decision-import-panel">
+      <div class="decision-import-header">
+        <h2>Імпортований пакет рішення</h2>
+        <span>${escapeHtml(info.type)}</span>
+      </div>
+
+      <div class="decision-import-grid">
+        <div class="decision-import-card">
+          <div class="impact-label">Файл-джерело</div>
+          <div class="impact-value small-text">${escapeHtml(info.sourceFileName)}</div>
+        </div>
+
+        <div class="decision-import-card">
+          <div class="impact-label">Сформовано</div>
+          <div class="impact-value small-text">${escapeHtml(info.exportedAt)}</div>
+        </div>
+
+        <div class="decision-import-card">
+          <div class="impact-label">Дій у пакеті</div>
+          <div class="impact-value">${info.actionCount}</div>
+        </div>
+
+        <div class="decision-import-card">
+          <div class="impact-label">Імпортовано статусів</div>
+          <div class="impact-value">${info.statusesCount}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function readDecisionPackagePayload(file) {
+  const name = String(file?.name || "").toLowerCase();
+
+  if (name.endsWith(".zip")) {
+    if (!window.JSZip) {
+      throw new Error("JSZip не завантажено. Неможливо прочитати ZIP-пакет.");
+    }
+
+    const zip = await JSZip.loadAsync(file);
+    const preferred = zip.file("decision_package.json") || zip.file("action_statuses.json");
+
+    if (!preferred) {
+      throw new Error("У ZIP не знайдено decision_package.json або action_statuses.json");
+    }
+
+    const text = await preferred.async("string");
+    return JSON.parse(text);
+  }
+
+  const text = await file.text();
+  return JSON.parse(text);
+}
+
+function extractStatusesFromDecisionPayload(payload) {
+  if (!payload || typeof payload !== "object") return {};
+
+  if (payload.type === "decision-package") {
+    return payload.actionStatuses || {};
+  }
+
+  if (payload.type === "action-statuses") {
+    return payload.statuses || {};
+  }
+
+  return payload.statuses || payload.actionStatuses || payload;
+}
+
+function mergeImportedActionStatuses(incoming) {
+  const allowed = new Set(["planned", "done", "rejected"]);
+  const current = getAllActionStatuses();
+  let importedCount = 0;
+
+  Object.entries(incoming || {}).forEach(([actionId, status]) => {
+    if (allowed.has(String(status))) {
+      current[actionId] = String(status);
+      importedCount += 1;
+    }
+  });
+
+  saveAllActionStatuses(current);
+  return importedCount;
+}
+
+async function importDecisionPackageFromFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const payload = await readDecisionPackagePayload(file);
+    const statuses = extractStatusesFromDecisionPayload(payload);
+    const importedCount = mergeImportedActionStatuses(statuses);
+
+    window.ArtAmmoState.importedDecisionPackage = payload;
+    window.ArtAmmoState.lastDecisionPackageImport = {
+      fileName: file.name,
+      importedAt: new Date().toISOString(),
+      importedCount
+    };
+
+    if (typeof setStatus === "function") {
+      setStatus(`Імпортовано пакет: ${importedCount} статусів`, "ok");
+    }
+
+    alert(`Пакет імпортовано. Статусів: ${importedCount}`);
+    applyFilters();
+  } catch (error) {
+    alert("Не вдалося імпортувати пакет рішення. Перевір JSON/ZIP-файл.");
+    console.error(error);
+  } finally {
+    event.target.value = "";
+  }
+}
+
+window.importDecisionPackageFromFile = importDecisionPackageFromFile;
 
 function decisionPackageText(payload) {
   const lines = [];
