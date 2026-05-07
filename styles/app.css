@@ -1076,3 +1076,14 @@ tr.row-long:hover td {
   font-size: 12px;
   line-height: 1.5;
 }
+
+
+.decision-package-note {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(88, 101, 242, 0.10);
+  border: 1px solid rgba(88, 101, 242, 0.22);
+  color: rgba(255,255,255,0.78);
+  font-size: 13px;
+}
