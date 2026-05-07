@@ -21,8 +21,8 @@ const appVersion = document.getElementById("appVersion");
 function getAppMeta() {
   return window.ART_AMMO_APP_META || {
     appName: "Art Ammo",
-    version: "0.25",
-    buildLabel: "v25-auto-dictionaries",
+    version: "0.26",
+    buildLabel: "v26-name-normalizer",
     buildDate: "2026-05-07",
     logicProfile: "Excel локально + аналітика залишків + журнал дій"
   };
@@ -133,6 +133,9 @@ function parseStructuredSheet(sheetName, rows) {
       ammoRaw: ammoText,
       projectile: parsed.projectile,
       charge: parsed.charge,
+      projectileKey: parsed.projectileKey,
+      chargeKey: parsed.chargeKey,
+      combinationKey: `${parsed.projectileKey}|${parsed.chargeKey}`,
       note: parsed.note,
       combination: `${parsed.projectile} + ${parsed.charge}`,
       rangeMeters,
@@ -156,20 +159,37 @@ function parseAmmoName(text) {
 
   if (!match) return null;
 
+  const projectile = normalizeName(match[1]);
+  const charge = normalizeName(match[2]);
+
   return {
-    projectile: normalizeName(match[1]),
-    charge: normalizeName(match[2]),
+    projectile,
+    charge,
+    projectileKey: getCanonicalKey(projectile),
+    chargeKey: getCanonicalKey(charge),
     note: cleanCell(match[3])
   };
 }
 
 function normalizeName(value) {
+  if (window.ArtAmmoNormalizer?.normalizeAmmoName) {
+    return window.ArtAmmoNormalizer.normalizeAmmoName(value);
+  }
+
   return cleanCell(value)
     .replace(/^М/g, "M")
     .replace(/\s*\/\s*/g, "/")
     .replace(/\s*,\s*/g, ", ")
     .replace(/\s*-\s*/g, "-")
     .trim();
+}
+
+function getCanonicalKey(value) {
+  if (window.ArtAmmoNormalizer?.canonicalKey) {
+    return window.ArtAmmoNormalizer.canonicalKey(value);
+  }
+
+  return cleanCell(value).toUpperCase();
 }
 
 function cleanCell(value) {
@@ -228,7 +248,7 @@ function groupByUnit(items) {
       grouped[item.unit].longRangeBalance += Number(item.balance || 0);
     }
 
-    grouped[item.unit].combinations.add(item.combination);
+    grouped[item.unit].combinations.add(item.combinationKey || item.combination);
   });
 
   return grouped;
@@ -1447,6 +1467,91 @@ function renderDataQualityPanel(report) {
 }
 
 
+
+function getNormalizerStats(items) {
+  const stats = {
+    totalRows: items.length,
+    changedProjectiles: 0,
+    changedCharges: 0,
+    uniqueProjectileKeys: new Set(),
+    uniqueChargeKeys: new Set(),
+    examples: []
+  };
+
+  items.forEach(item => {
+    const rawParsed = parseAmmoNameRaw(item.ammoRaw);
+    if (!rawParsed) return;
+
+    const rawProjectile = cleanCell(rawParsed.projectile);
+    const rawCharge = cleanCell(rawParsed.charge);
+
+    if (rawProjectile !== item.projectile) stats.changedProjectiles += 1;
+    if (rawCharge !== item.charge) stats.changedCharges += 1;
+
+    stats.uniqueProjectileKeys.add(item.projectileKey || getCanonicalKey(item.projectile));
+    stats.uniqueChargeKeys.add(item.chargeKey || getCanonicalKey(item.charge));
+
+    if (stats.examples.length < 8 && (rawProjectile !== item.projectile || rawCharge !== item.charge)) {
+      stats.examples.push({
+        raw: `${rawProjectile} (${rawCharge})`,
+        normalized: `${item.projectile} (${item.charge})`
+      });
+    }
+  });
+
+  return stats;
+}
+
+function parseAmmoNameRaw(text) {
+  const value = cleanCell(text);
+  const match = value.match(/^(.+?)\s*\((.+?)\)(.*)$/);
+  if (!match) return null;
+  return {
+    projectile: match[1],
+    charge: match[2]
+  };
+}
+
+function renderNormalizerPanel(items) {
+  const stats = getNormalizerStats(items || []);
+  const examplesHtml = stats.examples.length
+    ? stats.examples.map(example => `
+        <div class="normalizer-example">
+          <span>${example.raw}</span>
+          <b>→</b>
+          <span>${example.normalized}</span>
+        </div>
+      `).join("")
+    : `<div class="normalizer-empty">Явних змін назв не виявлено.</div>`;
+
+  return `
+    <div class="table-panel analysis-table normalizer-panel">
+      <h2>Нормалізатор назв</h2>
+      <div class="normalizer-grid">
+        <div class="normalizer-card">
+          <div class="metric-label">Нормалізовано снарядів</div>
+          <div class="metric-value">${stats.changedProjectiles}</div>
+        </div>
+        <div class="normalizer-card">
+          <div class="metric-label">Нормалізовано зарядів</div>
+          <div class="metric-value">${stats.changedCharges}</div>
+        </div>
+        <div class="normalizer-card">
+          <div class="metric-label">Унікальних снарядів</div>
+          <div class="metric-value">${stats.uniqueProjectileKeys.size}</div>
+        </div>
+        <div class="normalizer-card">
+          <div class="metric-label">Унікальних зарядів</div>
+          <div class="metric-value">${stats.uniqueChargeKeys.size}</div>
+        </div>
+      </div>
+      <div class="normalizer-examples">
+        ${examplesHtml}
+      </div>
+    </div>
+  `;
+}
+
 function buildAutoDictionaries(items) {
   const source = items || [];
   const unitsMap = new Map();
@@ -1737,6 +1842,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
 
     ${renderReportPassport(reportPassport)}
     ${renderDataQualityPanel(dataQuality)}
+    ${renderNormalizerPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderAutoDictionariesPanel(autoDictionaries)}
     ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderExchangeRecommendations(exchangeRecommendations)}
