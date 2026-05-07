@@ -5,11 +5,13 @@ const filtersPanel = document.getElementById("filtersPanel");
 const unitFilter = document.getElementById("unitFilter");
 const longRangeOnly = document.getElementById("longRangeOnly");
 const searchFilter = document.getElementById("searchFilter");
+const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
 longRangeOnly.addEventListener("change", applyFilters);
 searchFilter.addEventListener("input", applyFilters);
+resetFiltersBtn.addEventListener("click", resetFilters);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -251,6 +253,14 @@ function getCurrentFilteredItems() {
   }
 
   return filtered;
+}
+
+function resetFilters() {
+  unitFilter.value = "all";
+  longRangeOnly.checked = false;
+  searchFilter.value = "";
+
+  applyFilters();
 }
 
 function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
