@@ -285,6 +285,68 @@ function getLowBalanceItems(items, threshold = 10) {
     .sort(sortCriticalItems);
 }
 
+
+function getTopBalanceItems(items, limit = 5) {
+  return [...items]
+    .filter(item => Number(item.balance || 0) > 0)
+    .sort((a, b) =>
+      Number(b.balance || 0) - Number(a.balance || 0) ||
+      Number(b.rangeKm || 0) - Number(a.rangeKm || 0) ||
+      String(a.unit).localeCompare(String(b.unit), "uk")
+    )
+    .slice(0, limit);
+}
+
+function getTopLongRangeItems(items, limit = 5) {
+  return [...items]
+    .filter(item => item.longRange && Number(item.balance || 0) > 0)
+    .sort((a, b) =>
+      Number(b.rangeKm || 0) - Number(a.rangeKm || 0) ||
+      Number(b.balance || 0) - Number(a.balance || 0) ||
+      String(a.unit).localeCompare(String(b.unit), "uk")
+    )
+    .slice(0, limit);
+}
+
+function getTopRiskItems(items, threshold = 10, limit = 5) {
+  return [...items]
+    .filter(item => Number(item.balance || 0) <= threshold)
+    .sort((a, b) => {
+      const aZero = Number(a.balance || 0) === 0 ? 0 : 1;
+      const bZero = Number(b.balance || 0) === 0 ? 0 : 1;
+      if (aZero !== bZero) return aZero - bZero;
+
+      const aLong = a.longRange ? 0 : 1;
+      const bLong = b.longRange ? 0 : 1;
+      if (aLong !== bLong) return aLong - bLong;
+
+      return Number(a.balance || 0) - Number(b.balance || 0) ||
+        Number(b.rangeKm || 0) - Number(a.rangeKm || 0) ||
+        String(a.unit).localeCompare(String(b.unit), "uk");
+    })
+    .slice(0, limit);
+}
+
+function renderInsightList(items, emptyText) {
+  if (!items.length) {
+    return `<div class="insight-empty">${escapeHtml(emptyText)}</div>`;
+  }
+
+  return items.map(item => `
+    <div class="insight-row ${getRowClass(item)}">
+      <div class="insight-main">
+        <strong>${escapeHtml(item.projectile)}</strong>
+        <span>${escapeHtml(item.charge)}</span>
+      </div>
+      <div class="insight-meta">
+        <span>${escapeHtml(item.unit)}</span>
+        <span>${item.rangeKm ? item.rangeKm.toFixed(1) + " км" : "без дальності"}</span>
+        <b>${item.balance}</b>
+      </div>
+    </div>
+  `).join("");
+}
+
 function sortCriticalItems(a, b) {
   const aLong = a.longRange ? 0 : 1;
   const bLong = b.longRange ? 0 : 1;
@@ -490,6 +552,9 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const criticalItems = getCriticalItems(unitItems);
   const lowThreshold = getLowBalanceThreshold();
   const lowBalanceItems = getLowBalanceItems(unitItems, lowThreshold);
+  const topBalanceItems = getTopBalanceItems(unitItems, 5);
+  const topLongRangeItems = getTopLongRangeItems(unitItems, 5);
+  const topRiskItems = getTopRiskItems(unitItems, lowThreshold, 5);
 
   let html = `
     <div class="analysis-grid">
@@ -520,6 +585,23 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
       <div class="metric-card">
         <div class="metric-label">Малий залишок ≤${lowThreshold}</div>
         <div class="metric-value">${lowBalanceItems.length}</div>
+      </div>
+    </div>
+
+    <div class="insights-grid">
+      <div class="insight-card">
+        <div class="insight-title">ТОП залишків</div>
+        ${renderInsightList(topBalanceItems, "Позицій із залишком не знайдено")}
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-title">ТОП далекобійних</div>
+        ${renderInsightList(topLongRangeItems, "Далекобійних залишків не знайдено")}
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-title">Критичний ризик</div>
+        ${renderInsightList(topRiskItems, "Критичних позицій не знайдено")}
       </div>
     </div>
   `;
