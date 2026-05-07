@@ -250,6 +250,134 @@ function renderUnitRankList(units, valueKey, suffix = "") {
   `).join("");
 }
 
+
+function getRecommendations(items, grouped) {
+  const threshold = getLowBalanceThreshold();
+  const unitStats = enrichUnitStats(grouped, threshold);
+  const zeroItems = getCriticalItems(items);
+  const lowItems = getLowBalanceItems(items, threshold);
+  const longRangeItems = items.filter(item => item.longRange);
+  const totalBalance = items.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+  const longRangeBalance = longRangeItems.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+  const recommendations = [];
+
+  const push = (level, title, text, meta = "") => {
+    recommendations.push({ level, title, text, meta });
+  };
+
+  if (!items.length) {
+    push("neutral", "Дані відсутні", "За поточними фільтрами немає рядків для аналізу.");
+    return recommendations;
+  }
+
+  const zeroLong = zeroItems.filter(item => item.longRange).length;
+  if (zeroLong > 0) {
+    push(
+      "danger",
+      "Критично: нульові далекобійні позиції",
+      `Знайдено ${zeroLong} далекобійних позицій із нульовим залишком. Їх варто перевірити першочергово.`,
+      "Пріоритет: високий"
+    );
+  }
+
+  if (lowItems.length > 0) {
+    push(
+      "warning",
+      "Є позиції з малим залишком",
+      `Позицій із залишком від 1 до ${threshold}: ${lowItems.length}. Доцільно переглянути їх окремо через фільтр «малий залишок».`,
+      `Поточний поріг: ≤${threshold}`
+    );
+  }
+
+  const mostRiskyUnit = [...unitStats]
+    .sort((a, b) => Number(b.riskCount || 0) - Number(a.riskCount || 0) || Number(a.totalBalance || 0) - Number(b.totalBalance || 0))[0];
+
+  if (mostRiskyUnit && mostRiskyUnit.riskCount > 0) {
+    push(
+      "warning",
+      "Підрозділ із найбільшим ризиком",
+      `${mostRiskyUnit.unit}: ${mostRiskyUnit.riskCount} проблемних позицій, з них нульових — ${mostRiskyUnit.zeroCount}, малих — ${mostRiskyUnit.lowCount}.`,
+      "Потрібна звірка залишків"
+    );
+  }
+
+  const bestLongRangeUnit = [...unitStats]
+    .filter(unit => Number(unit.longRangeBalance || 0) > 0)
+    .sort((a, b) => Number(b.longRangeBalance || 0) - Number(a.longRangeBalance || 0))[0];
+
+  if (bestLongRangeUnit) {
+    push(
+      "good",
+      "Найбільший запас далекобійних",
+      `${bestLongRangeUnit.unit}: ${bestLongRangeUnit.longRangeBalance} далекобійних залишків (${bestLongRangeUnit.longRangeShare}% від залишку підрозділу).`,
+      "Сильна позиція"
+    );
+  }
+
+  const noLongRangeUnits = unitStats.filter(unit => Number(unit.totalBalance || 0) > 0 && Number(unit.longRangeBalance || 0) === 0);
+  if (noLongRangeUnits.length) {
+    push(
+      "neutral",
+      "Підрозділи без далекобійних залишків",
+      `За поточними даними таких підрозділів: ${noLongRangeUnits.length}. Перевір: ${noLongRangeUnits.slice(0, 3).map(unit => unit.unit).join(", ")}${noLongRangeUnits.length > 3 ? "…" : ""}.`,
+      "Інформаційний контроль"
+    );
+  }
+
+  if (totalBalance > 0) {
+    const longShare = Math.round((longRangeBalance / totalBalance) * 100);
+    if (longShare < 25) {
+      push(
+        "warning",
+        "Низька частка далекобійних",
+        `Далекобійні становлять приблизно ${longShare}% від поточного залишку. Варто окремо контролювати цю групу.`,
+        "Баланс дальності"
+      );
+    } else {
+      push(
+        "good",
+        "Баланс далекобійних прийнятний",
+        `Далекобійні становлять приблизно ${longShare}% від поточного залишку.`,
+        "Баланс дальності"
+      );
+    }
+  }
+
+  if (!zeroItems.length && !lowItems.length) {
+    push(
+      "good",
+      "Критичних залишків не виявлено",
+      "За поточним порогом нульові та малі залишки не знайдені.",
+      "Поточний фільтр"
+    );
+  }
+
+  return recommendations.slice(0, 6);
+}
+
+function renderRecommendations(recommendations) {
+  if (!recommendations.length) return "";
+
+  return `
+    <div class="recommendation-panel">
+      <div class="recommendation-header">
+        <h2>Рекомендації системи</h2>
+        <span>Автоматичні висновки за поточними фільтрами</span>
+      </div>
+
+      <div class="recommendation-grid">
+        ${recommendations.map(item => `
+          <div class="recommendation-card recommendation-${item.level}">
+            <div class="recommendation-title">${escapeHtml(item.title)}</div>
+            <div class="recommendation-text">${escapeHtml(item.text)}</div>
+            ${item.meta ? `<div class="recommendation-meta">${escapeHtml(item.meta)}</div>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function groupByCategory(items) {
   const grouped = {};
 
@@ -611,6 +739,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const topUnitsByBalance = getUnitRanking(grouped, "balance", 6);
   const topUnitsByLongRange = getUnitRanking(grouped, "longRange", 6);
   const topUnitsByRisk = getUnitRanking(grouped, "risk", 6);
+  const recommendations = getRecommendations(unitItems, grouped);
 
   let html = `
     <div class="analysis-grid">
@@ -677,6 +806,8 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
         ${renderUnitRankList(topUnitsByRisk, "riskCount", " поз.")}
       </div>
     </div>
+
+    ${renderRecommendations(recommendations)}
   `;
 
   if (summaryItems && summaryItems.length) {
