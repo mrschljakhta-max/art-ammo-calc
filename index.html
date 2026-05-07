@@ -18,8 +18,8 @@
   <script>
     window.ART_AMMO_APP_META = {
       appName: "Art Ammo",
-      version: "0.27",
-      buildLabel: "v27-alias-watchlist",
+      version: "0.28",
+      buildLabel: "v28-alias-dictionary",
       buildDate: "2026-05-07",
       logicProfile: "Excel локально + аналітика залишків + журнал дій"
     };
@@ -36,7 +36,7 @@
         </div>
         <div class="hero-meta">
           <div class="status-pill" id="appStatus">Очікує Excel</div>
-          <div class="version-pill" id="appVersion">v0.27</div>
+          <div class="version-pill" id="appVersion">v0.28</div>
         </div>
       </div>
 
@@ -143,6 +143,19 @@
           Імпорт статусів
           <input type="file" id="importStatusesFile" accept=".json" hidden>
         </label>
+
+        <button id="exportAliasDictionaryBtn" class="analyze-button small-button" disabled>
+          Експорт словника
+        </button>
+
+        <label class="analyze-button small-button import-status-label">
+          Імпорт словника
+          <input type="file" id="importAliasDictionaryFile" accept=".json" hidden>
+        </label>
+
+        <button id="resetAliasDictionaryBtn" class="analyze-button small-button" disabled>
+          Очистити словник
+        </button>
 
         <button id="resetFiltersBtn" class="analyze-button small-button">
           Скинути фільтри
