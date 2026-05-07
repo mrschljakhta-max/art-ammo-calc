@@ -378,6 +378,122 @@ function renderRecommendations(recommendations) {
   `;
 }
 
+
+function getCommanderSummary(items, grouped) {
+  const threshold = getLowBalanceThreshold();
+  const totalBalance = items.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+  const totalReceived = items.reduce((sum, item) => sum + Number(item.received || 0), 0);
+  const totalSpent = items.reduce((sum, item) => sum + Number(item.spent || 0), 0);
+  const longRangeBalance = items
+    .filter(item => item.longRange)
+    .reduce((sum, item) => sum + Number(item.balance || 0), 0);
+  const shortRangeBalance = totalBalance - longRangeBalance;
+  const zeroItems = getCriticalItems(items);
+  const lowItems = getLowBalanceItems(items, threshold);
+  const unitStats = enrichUnitStats(grouped, threshold);
+  const longShare = totalBalance > 0 ? Math.round((longRangeBalance / totalBalance) * 100) : 0;
+  const riskShare = items.length > 0 ? Math.round(((zeroItems.length + lowItems.length) / items.length) * 100) : 0;
+
+  const mostStockedUnit = [...unitStats]
+    .sort((a, b) => Number(b.totalBalance || 0) - Number(a.totalBalance || 0))[0];
+  const bestLongRangeUnit = [...unitStats]
+    .sort((a, b) => Number(b.longRangeBalance || 0) - Number(a.longRangeBalance || 0))[0];
+  const mostRiskyUnit = [...unitStats]
+    .sort((a, b) => Number(b.riskCount || 0) - Number(a.riskCount || 0))[0];
+
+  const topZeroLong = zeroItems
+    .filter(item => item.longRange)
+    .slice(0, 5)
+    .map(item => `${item.unit}: ${item.projectile} (${item.charge})`);
+
+  const lines = [];
+
+  lines.push({
+    label: "Загальна оцінка",
+    text: `За поточним відбором обліковано ${items.length} позицій по ${Object.keys(grouped).length} підрозділах. Загальний залишок — ${totalBalance}, з них далекобійних — ${longRangeBalance} (${longShare}%).`
+  });
+
+  lines.push({
+    label: "Рух БК",
+    text: `Отримання — ${totalReceived}, витрата — ${totalSpent}, поточний баланс — ${totalBalance}. Недалекобійних залишків — ${shortRangeBalance}.`
+  });
+
+  lines.push({
+    label: "Критичність",
+    text: `Нульових позицій — ${zeroItems.length}, малих залишків ≤${threshold} — ${lowItems.length}. Частка проблемних позицій — близько ${riskShare}%.`
+  });
+
+  if (mostRiskyUnit && mostRiskyUnit.riskCount > 0) {
+    lines.push({
+      label: "Першочергова увага",
+      text: `${mostRiskyUnit.unit}: ${mostRiskyUnit.riskCount} проблемних позицій, з них нульових — ${mostRiskyUnit.zeroCount}, малих — ${mostRiskyUnit.lowCount}.`
+    });
+  }
+
+  if (bestLongRangeUnit && Number(bestLongRangeUnit.longRangeBalance || 0) > 0) {
+    lines.push({
+      label: "Далекобійний ресурс",
+      text: `Найбільший запас далекобійних має ${bestLongRangeUnit.unit}: ${bestLongRangeUnit.longRangeBalance}.`
+    });
+  }
+
+  if (mostStockedUnit && Number(mostStockedUnit.totalBalance || 0) > 0) {
+    lines.push({
+      label: "Найбільший загальний запас",
+      text: `${mostStockedUnit.unit}: ${mostStockedUnit.totalBalance} залишку по всіх врахованих позиціях.`
+    });
+  }
+
+  if (topZeroLong.length) {
+    lines.push({
+      label: "Нульові далекобійні",
+      text: `Перші позиції для перевірки: ${topZeroLong.join("; ")}.`
+    });
+  }
+
+  const conclusion = [];
+  if (zeroItems.length || lowItems.length) {
+    conclusion.push(`перевірити проблемні позиції (${zeroItems.length + lowItems.length})`);
+  }
+  if (longShare < 25 && totalBalance > 0) {
+    conclusion.push("окремо контролювати далекобійний ресурс");
+  }
+  if (mostRiskyUnit && mostRiskyUnit.riskCount > 0) {
+    conclusion.push(`почати звірку з ${mostRiskyUnit.unit}`);
+  }
+
+  lines.push({
+    label: "Короткий висновок",
+    text: conclusion.length
+      ? `Рекомендовано: ${conclusion.join("; ")}.`
+      : "Критичних відхилень за поточними фільтрами не виявлено."
+  });
+
+  return lines;
+}
+
+function renderCommanderSummary(summary) {
+  if (!summary.length) return "";
+
+  return `
+    <div class="commander-summary-panel">
+      <div class="commander-summary-header">
+        <h2>Короткий командирський висновок</h2>
+        <span>Стислий підсумок для швидкого огляду</span>
+      </div>
+
+      <div class="commander-summary-list">
+        ${summary.map(item => `
+          <div class="commander-summary-row">
+            <div class="commander-summary-label">${escapeHtml(item.label)}</div>
+            <div class="commander-summary-text">${escapeHtml(item.text)}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function groupByCategory(items) {
   const grouped = {};
 
@@ -740,6 +856,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const topUnitsByLongRange = getUnitRanking(grouped, "longRange", 6);
   const topUnitsByRisk = getUnitRanking(grouped, "risk", 6);
   const recommendations = getRecommendations(unitItems, grouped);
+  const commanderSummary = getCommanderSummary(unitItems, grouped);
 
   let html = `
     <div class="analysis-grid">
@@ -808,6 +925,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     </div>
 
     ${renderRecommendations(recommendations)}
+    ${renderCommanderSummary(commanderSummary)}
   `;
 
   if (summaryItems && summaryItems.length) {

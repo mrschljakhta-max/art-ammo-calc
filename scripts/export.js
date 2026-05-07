@@ -1,9 +1,9 @@
 (function () {
-  const btn = document.getElementById("exportExcelBtn");
+  const exportExcelBtn = document.getElementById("exportExcelBtn");
 
-  if (!btn) return;
+  if (!exportExcelBtn) return;
 
-  btn.addEventListener("click", exportAnalysisToExcel);
+  exportExcelBtn.addEventListener("click", exportAnalysisToExcel);
 
   function exportAnalysisToExcel() {
     const items = typeof getCurrentFilteredItems === "function"
@@ -11,25 +11,26 @@
       : (window.ArtAmmoState?.unitItems || []);
 
     if (!items.length) {
-      alert("Немає даних для експорту. Спочатку натисни «Аналізувати файл».");
+      alert("Немає даних для експорту. Спочатку завантаж Excel-файл.");
       return;
     }
 
-    const grouped = groupByUnit(items);
-    const groupedCategories = typeof groupByCategory === "function"
-      ? groupByCategory(items)
-      : {};
-    const groupedRanges = typeof groupByRangeBand === "function"
-      ? groupByRangeBand(items)
-      : {};
-    const criticalItems = typeof getCriticalItems === "function"
-      ? getCriticalItems(items)
-      : items.filter(item => Number(item.balance || 0) === 0);
-    const lowBalanceItems = typeof getLowBalanceItems === "function"
-      ? getLowBalanceItems(items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10)
-      : items.filter(item => Number(item.balance || 0) > 0 && Number(item.balance || 0) <= (typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10));
-
+    const grouped = typeof groupByUnit === "function" ? groupByUnit(items) : {};
     const workbook = XLSX.utils.book_new();
+
+    const commanderSummary = typeof getCommanderSummary === "function"
+      ? getCommanderSummary(items, grouped)
+      : [];
+
+    if (commanderSummary.length) {
+      const commanderRows = commanderSummary.map(item => ({
+        "Блок": item.label,
+        "Висновок": item.text
+      }));
+
+      const commanderSheet = XLSX.utils.json_to_sheet(commanderRows);
+      XLSX.utils.book_append_sheet(workbook, commanderSheet, "Командирський висновок");
+    }
 
     const summaryRows = Object.values(grouped).map(unit => ({
       "Підрозділ": unit.unit,
@@ -40,57 +41,8 @@
       "Далекобійних": unit.longRangeBalance
     }));
 
-    XLSX.utils.book_append_sheet(
-      workbook,
-      XLSX.utils.json_to_sheet(summaryRows),
-      "Підсумок"
-    );
-
-    const categoryRows = Object.values(groupedCategories).map(category => ({
-      "Категорія": category.category,
-      "Комбінацій": category.combinations.size,
-      "Отримання": category.totalReceived,
-      "Витрата": category.totalSpent,
-      "Залишок": category.totalBalance,
-      "Далекобійних": category.longRangeBalance
-    }));
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      XLSX.utils.json_to_sheet(categoryRows),
-      "Категорії"
-    );
-
-    const rangeRows = Object.values(groupedRanges).map(range => ({
-      "Діапазон": range.band,
-      "Комбінацій": range.combinations.size,
-      "Рядків": range.items.length,
-      "Залишок": range.totalBalance
-    }));
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      XLSX.utils.json_to_sheet(rangeRows),
-      "Дальності"
-    );
-
-    const bottleneckRows = [...criticalItems, ...lowBalanceItems].map(item => ({
-      "Статус": Number(item.balance || 0) === 0 ? "Нуль" : "Мало",
-      "Підрозділ": item.unit,
-      "Рядок": item.row,
-      "Категорія": item.category,
-      "Снаряд": item.projectile,
-      "Заряд": item.charge,
-      "Дальність, км": item.rangeKm ? item.rangeKm.toFixed(1) : "",
-      "Далекобійна": item.longRange ? "Так" : "Ні",
-      "Залишок": item.balance
-    }));
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      XLSX.utils.json_to_sheet(bottleneckRows),
-      "Вузькі місця"
-    );
+    const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "Підсумок");
 
     const detailRows = items.map(item => ({
       "Підрозділ": item.unit,
@@ -107,11 +59,8 @@
       "Залишок": item.balance
     }));
 
-    XLSX.utils.book_append_sheet(
-      workbook,
-      XLSX.utils.json_to_sheet(detailRows),
-      "Детально"
-    );
+    const detailSheet = XLSX.utils.json_to_sheet(detailRows);
+    XLSX.utils.book_append_sheet(workbook, detailSheet, "Детально");
 
     Object.values(grouped).forEach(unit => {
       const unitRows = unit.items.map(item => ({
@@ -128,15 +77,12 @@
         "Залишок": item.balance
       }));
 
-      const safeSheetName = unit.unit
+      const safeSheetName = String(unit.unit || "Підрозділ")
         .replace(/[\\/?*\[\]:]/g, "")
-        .slice(0, 31);
+        .slice(0, 31) || "Підрозділ";
 
-      XLSX.utils.book_append_sheet(
-        workbook,
-        XLSX.utils.json_to_sheet(unitRows),
-        safeSheetName || "Підрозділ"
-      );
+      const unitSheet = XLSX.utils.json_to_sheet(unitRows);
+      XLSX.utils.book_append_sheet(workbook, unitSheet, safeSheetName);
     });
 
     const now = new Date();
