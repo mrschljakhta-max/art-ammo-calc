@@ -21,8 +21,8 @@ const appVersion = document.getElementById("appVersion");
 function getAppMeta() {
   return window.ART_AMMO_APP_META || {
     appName: "Art Ammo",
-    version: "0.23",
-    buildLabel: "v23-report-version",
+    version: "0.24",
+    buildLabel: "v24-data-quality",
     buildDate: "2026-05-07",
     logicProfile: "Excel локально + аналітика залишків + журнал дій"
   };
@@ -1282,6 +1282,170 @@ function updateFilterStatus(items) {
     : `Показано всі рядки: ${items.length}.`;
 }
 
+
+function getDataQualityReport(items, summaryItems = [], grouped = {}) {
+  const threshold = getLowBalanceThreshold();
+  const issues = [];
+  const seen = new Map();
+
+  items.forEach(item => {
+    const location = `${item.unit} · рядок ${item.row}`;
+
+    if (!item.projectile || !item.charge) {
+      issues.push({
+        severity: "critical",
+        type: "Неповна комбінація",
+        location,
+        details: `Не вдалося визначити снаряд або заряд: ${item.ammoRaw || item.combination || ""}`
+      });
+    }
+
+    if (!item.rangeKm || Number(item.rangeKm) <= 0) {
+      issues.push({
+        severity: "warning",
+        type: "Немає дальності",
+        location,
+        details: `${item.combination}: дальність порожня або 0`
+      });
+    }
+
+    if (Number(item.balance) < 0 || Number(item.received) < 0 || Number(item.spent) < 0) {
+      issues.push({
+        severity: "critical",
+        type: "Від’ємне значення",
+        location,
+        details: `${item.combination}: отримання ${item.received}, витрата ${item.spent}, залишок ${item.balance}`
+      });
+    }
+
+    const hasMovement = Number(item.received || 0) || Number(item.spent || 0) || Number(item.balance || 0);
+    const expectedBalance = Number(item.received || 0) - Number(item.spent || 0);
+
+    if (hasMovement && Number.isFinite(expectedBalance) && expectedBalance !== Number(item.balance || 0)) {
+      issues.push({
+        severity: "info",
+        type: "Контроль формули",
+        location,
+        details: `${item.combination}: отримання - витрата = ${expectedBalance}, у таблиці залишок ${item.balance}`
+      });
+    }
+
+    const key = `${item.unit}|${item.projectile}|${item.charge}|${item.rangeMeters}`;
+    if (!seen.has(key)) seen.set(key, []);
+    seen.get(key).push(item.row);
+  });
+
+  seen.forEach((rows, key) => {
+    if (rows.length <= 1) return;
+    const [unit, projectile, charge] = key.split("|");
+    issues.push({
+      severity: "warning",
+      type: "Дубль позиції",
+      location: `${unit} · рядки ${rows.join(", ")}`,
+      details: `${projectile} (${charge}) повторюється ${rows.length} рази`
+    });
+  });
+
+  const summaryTotal = summaryItems.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+  const unitTotal = items.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+
+  if (summaryItems.length && summaryTotal !== unitTotal) {
+    issues.push({
+      severity: "warning",
+      type: "Розбіжність зі зведеним аркушем",
+      location: ART_AMMO_SCHEMA.SUMMARY_SHEET_NAME,
+      details: `Підрозділи: ${unitTotal}; зведений аркуш: ${summaryTotal}; різниця: ${unitTotal - summaryTotal}`
+    });
+  }
+
+  const bySeverity = issues.reduce((acc, issue) => {
+    acc[issue.severity] = (acc[issue.severity] || 0) + 1;
+    return acc;
+  }, {});
+
+  const unitsWithoutRows = Object.values(grouped)
+    .filter(unit => !unit.items || !unit.items.length)
+    .map(unit => unit.unit);
+
+  return {
+    totalIssues: issues.length,
+    critical: bySeverity.critical || 0,
+    warning: bySeverity.warning || 0,
+    info: bySeverity.info || 0,
+    lowBalanceThreshold: threshold,
+    summaryCompared: Boolean(summaryItems.length),
+    unitsWithoutRows,
+    issues: issues.slice(0, 80)
+  };
+}
+
+function renderDataQualityPanel(report) {
+  if (!report) return "";
+
+  const statusClass = report.critical
+    ? "quality-critical"
+    : report.warning
+      ? "quality-warning"
+      : "quality-ok";
+
+  const statusText = report.critical
+    ? "Є критичні помилки"
+    : report.warning
+      ? "Є попередження"
+      : "Явних проблем не знайдено";
+
+  const issueRows = report.issues && report.issues.length
+    ? report.issues.map(issue => `
+        <tr class="quality-row-${escapeHtml(issue.severity)}">
+          <td><span class="quality-badge ${escapeHtml(issue.severity)}">${escapeHtml(issue.severity)}</span></td>
+          <td>${escapeHtml(issue.type)}</td>
+          <td>${escapeHtml(issue.location)}</td>
+          <td>${escapeHtml(issue.details)}</td>
+        </tr>
+      `).join("")
+    : `
+        <tr>
+          <td colspan="4">Після базової перевірки проблем не виявлено.</td>
+        </tr>
+      `;
+
+  return `
+    <div class="data-quality-panel ${statusClass}">
+      <div class="data-quality-header">
+        <div>
+          <h2>Контроль якості Excel</h2>
+          <p>${escapeHtml(statusText)}</p>
+        </div>
+        <div class="data-quality-score">
+          <span>${report.totalIssues}</span>
+          <small>зауважень</small>
+        </div>
+      </div>
+
+      <div class="quality-metrics-grid">
+        <div class="quality-metric"><b>${report.critical}</b><span>критичних</span></div>
+        <div class="quality-metric"><b>${report.warning}</b><span>попереджень</span></div>
+        <div class="quality-metric"><b>${report.info}</b><span>інформаційних</span></div>
+        <div class="quality-metric"><b>${report.summaryCompared ? "Так" : "Ні"}</b><span>звірка зі зведеним</span></div>
+      </div>
+
+      <div class="table-wrap compact-wrap quality-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Рівень</th>
+              <th>Тип</th>
+              <th>Де</th>
+              <th>Деталі</th>
+            </tr>
+          </thead>
+          <tbody>${issueRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
 function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   if (!allItems.length) {
     analysisPanel.innerHTML = `
@@ -1319,6 +1483,9 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const exchangeRecommendations = getFilteredExchangeRecommendations(exchangeBaseItems, getLowBalanceThreshold(), 12);
   const exchangeActionPlan = getFilteredExchangeActionPlan(exchangeRecommendations);
   const actionStatusIntegrity = getActionStatusIntegrity(exchangeActionPlan);
+  const dataQuality = getDataQualityReport(unitItems, summaryItems, grouped);
+
+  window.ArtAmmoState.dataQuality = dataQuality;
 
   let html = `
     <div class="analysis-grid">
@@ -1387,6 +1554,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     </div>
 
     ${renderReportPassport(reportPassport)}
+    ${renderDataQualityPanel(dataQuality)}
     ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderExchangeRecommendations(exchangeRecommendations)}
     ${renderExchangeImpact(exchangeRecommendations)}
@@ -2098,6 +2266,7 @@ function buildDecisionPackagePayload() {
   );
   const actionPlan = getFilteredExchangeActionPlan(exchangeRecommendations);
   const actionIntegrity = getActionStatusIntegrity(actionPlan);
+  const dataQuality = getDataQualityReport(items, [], grouped);
 
   const totals = {
     units: Object.keys(grouped).length,
@@ -2130,6 +2299,7 @@ function buildDecisionPackagePayload() {
     exchangeRecommendations,
     actionPlan,
     actionStatusIntegrity: actionIntegrity,
+    dataQuality,
     actionStatuses: getAllActionStatuses(),
     filteredRows: items.map(item => ({
       unit: item.unit,
