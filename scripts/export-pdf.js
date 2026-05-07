@@ -94,9 +94,11 @@
       );
     }
 
-    const exchangeRecommendations = typeof getExchangeRecommendations === "function"
-      ? getExchangeRecommendations(window.ArtAmmoState?.unitItems || items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10, 20)
-      : [];
+    const exchangeRecommendations = typeof getFilteredExchangeRecommendations === "function"
+      ? getFilteredExchangeRecommendations(window.ArtAmmoState?.unitItems || items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10, 20)
+      : (typeof getExchangeRecommendations === "function"
+        ? getExchangeRecommendations(window.ArtAmmoState?.unitItems || items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10, 20)
+        : []);
 
     if (exchangeRecommendations.length) {
       content.push(
@@ -132,7 +134,9 @@
       );
 
       if (typeof getExchangeActionPlan === "function") {
-        const actionPlan = getExchangeActionPlan(exchangeRecommendations);
+        const actionPlan = typeof getFilteredExchangeActionPlan === "function"
+          ? getFilteredExchangeActionPlan(exchangeRecommendations)
+          : getExchangeActionPlan(exchangeRecommendations);
 
         if (actionPlan.length) {
           content.push(

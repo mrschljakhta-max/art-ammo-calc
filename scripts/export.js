@@ -46,9 +46,11 @@
       XLSX.utils.book_append_sheet(workbook, commanderSheet, "Командирський висновок");
     }
 
-    const exchangeRecommendations = typeof getExchangeRecommendations === "function"
-      ? getExchangeRecommendations(window.ArtAmmoState?.unitItems || items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10, 50)
-      : [];
+    const exchangeRecommendations = typeof getFilteredExchangeRecommendations === "function"
+      ? getFilteredExchangeRecommendations(window.ArtAmmoState?.unitItems || items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10, 50)
+      : (typeof getExchangeRecommendations === "function"
+        ? getExchangeRecommendations(window.ArtAmmoState?.unitItems || items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10, 50)
+        : []);
 
     if (exchangeRecommendations.length) {
       const exchangeRows = exchangeRecommendations.map(item => ({
@@ -70,7 +72,9 @@
       XLSX.utils.book_append_sheet(workbook, exchangeSheet, "Рекомендації обміну");
 
       if (typeof getExchangeActionPlan === "function") {
-        const actionPlan = getExchangeActionPlan(exchangeRecommendations);
+        const actionPlan = typeof getFilteredExchangeActionPlan === "function"
+          ? getFilteredExchangeActionPlan(exchangeRecommendations)
+          : getExchangeActionPlan(exchangeRecommendations);
 
         if (actionPlan.length) {
           const actionRows = actionPlan.map(item => ({

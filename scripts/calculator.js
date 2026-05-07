@@ -9,6 +9,8 @@ const filterStatus = document.getElementById("filterStatus");
 const lowBalanceThreshold = document.getElementById("lowBalanceThreshold");
 const stockFilter = document.getElementById("stockFilter");
 const sortFilter = document.getElementById("sortFilter");
+const actionPriorityFilter = document.getElementById("actionPriorityFilter");
+const actionLongOnly = document.getElementById("actionLongOnly");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
@@ -18,6 +20,8 @@ resetFiltersBtn.addEventListener("click", resetFilters);
 lowBalanceThreshold.addEventListener("input", applyFilters);
 stockFilter.addEventListener("change", applyFilters);
 sortFilter.addEventListener("change", applyFilters);
+if (actionPriorityFilter) actionPriorityFilter.addEventListener("change", applyFilters);
+if (actionLongOnly) actionLongOnly.addEventListener("change", applyFilters);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -550,7 +554,27 @@ function getActiveFilterDescription() {
     active.push(`залишки: ${getStockFilterLabel()}`);
   }
 
+  const actionDescription = getActionFilterDescription();
+  if (actionDescription !== "усі дії") {
+    active.push(`журнал дій: ${actionDescription}`);
+  }
+
   return active.length ? active.join("; ") : "без додаткових фільтрів";
+}
+
+function getActionFilterDescription() {
+  const parts = [];
+  const priority = actionPriorityFilter?.value || "all";
+
+  if (priority !== "all") {
+    parts.push(`пріоритет ${priority}`);
+  }
+
+  if (actionLongOnly?.checked) {
+    parts.push("тільки далекобійні");
+  }
+
+  return parts.length ? parts.join(", ") : "усі дії";
 }
 
 function getReportPassport(items, grouped) {
@@ -569,7 +593,8 @@ function getReportPassport(items, grouped) {
     { label: "Активні фільтри", value: getActiveFilterDescription() },
     { label: "Поріг малого залишку", value: `≤${threshold}` },
     { label: "Фільтр залишків", value: getStockFilterLabel() },
-    { label: "Сортування", value: getSortLabel() }
+    { label: "Сортування", value: getSortLabel() },
+    { label: "Фільтр журналу дій", value: getActionFilterDescription() }
   ];
 }
 
@@ -1047,6 +1072,8 @@ function resetFilters() {
   lowBalanceThreshold.value = "10";
   stockFilter.value = "all";
   sortFilter.value = "default";
+  if (actionPriorityFilter) actionPriorityFilter.value = "all";
+  if (actionLongOnly) actionLongOnly.checked = false;
   applyFilters();
 }
 
@@ -1132,6 +1159,9 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const recommendations = getRecommendations(unitItems, grouped);
   const commanderSummary = getCommanderSummary(unitItems, grouped);
   const reportPassport = getReportPassport(unitItems, grouped);
+  const exchangeBaseItems = window.ArtAmmoState?.unitItems || unitItems;
+  const exchangeRecommendations = getFilteredExchangeRecommendations(exchangeBaseItems, getLowBalanceThreshold(), 12);
+  const exchangeActionPlan = getFilteredExchangeActionPlan(exchangeRecommendations);
 
   let html = `
     <div class="analysis-grid">
@@ -1201,9 +1231,9 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
 
     ${renderReportPassport(reportPassport)}
     ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
-    ${renderExchangeRecommendations(getExchangeRecommendations(window.ArtAmmoState?.unitItems || unitItems, getLowBalanceThreshold(), 12))}
-    ${renderExchangeImpact(getExchangeRecommendations(window.ArtAmmoState?.unitItems || unitItems, getLowBalanceThreshold(), 12))}
-    ${renderExchangeActionPlan(getExchangeActionPlan(getExchangeRecommendations(window.ArtAmmoState?.unitItems || unitItems, getLowBalanceThreshold(), 12)))}
+    ${renderExchangeRecommendations(exchangeRecommendations)}
+    ${renderExchangeImpact(exchangeRecommendations)}
+    ${renderExchangeActionPlan(exchangeActionPlan)}
     ${renderRecommendations(recommendations)}
     ${renderCommanderSummary(commanderSummary)}
   `;
@@ -1652,6 +1682,27 @@ function renderExchangeImpact(recommendations) {
 }
 
 
+function getFilteredExchangeRecommendations(items, threshold = 10, limit = 12) {
+  let recommendations = getExchangeRecommendations(items, threshold, limit);
+
+  if (actionLongOnly?.checked) {
+    recommendations = recommendations.filter(item => item.longRange);
+  }
+
+  return recommendations;
+}
+
+function getFilteredExchangeActionPlan(recommendations) {
+  let plan = getExchangeActionPlan(recommendations);
+  const priority = actionPriorityFilter?.value || "all";
+
+  if (priority !== "all") {
+    plan = plan.filter(item => item.priority === priority);
+  }
+
+  return plan;
+}
+
 function getExchangeActionPlan(recommendations) {
   const recs = Array.isArray(recommendations) ? recommendations : [];
 
@@ -1698,7 +1749,7 @@ function renderExchangeActionPlan(plan) {
     <div class="action-plan-panel">
       <div class="action-plan-header">
         <h2>Журнал рекомендованих дій</h2>
-        <span>Практичний список кроків за результатами обміну</span>
+        <span>Практичний список кроків за результатами обміну · ${escapeHtml(getActionFilterDescription())}</span>
       </div>
 
       <div class="table-wrap compact-wrap">
