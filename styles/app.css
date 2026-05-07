@@ -1449,3 +1449,63 @@ tr.row-long:hover td {
   align-items: center;
   flex-wrap: wrap;
 }
+
+
+.alias-watchlist-panel {
+  border-color: rgba(251, 191, 36, 0.22);
+}
+
+.alias-watchlist-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.alias-watchlist-header p {
+  margin-top: 6px;
+  color: rgba(255,255,255,0.68);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.alias-count-pill {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  color: #fde68a;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.alias-key {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.45);
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.alias-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: 2px 4px 2px 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.09);
+  color: rgba(255,255,255,0.86);
+  font-size: 12px;
+}
+
+.muted-cell {
+  color: rgba(255,255,255,0.48);
+  font-style: italic;
+}
+
+@media (max-width: 900px) {
+  .alias-watchlist-header {
+    flex-direction: column;
+  }
+}
