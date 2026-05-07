@@ -1546,3 +1546,53 @@ tr.row-long:hover td {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+/* v0.29 — Alias dictionary inline editor */
+.alias-editor-card {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+}
+
+.alias-editor-title {
+  font-weight: 900;
+  margin-bottom: 12px;
+  color: rgba(255,255,255,0.92);
+}
+
+.alias-editor-grid {
+  display: grid;
+  grid-template-columns: 150px minmax(220px, 1fr) minmax(220px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.alias-editor-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.62);
+}
+
+.mini-danger-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.26);
+  color: #fecaca;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.mini-danger-btn:hover {
+  background: rgba(239, 68, 68, 0.24);
+}
+
+@media (max-width: 1000px) {
+  .alias-editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
