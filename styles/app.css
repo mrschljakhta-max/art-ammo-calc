@@ -1509,3 +1509,40 @@ tr.row-long:hover td {
     flex-direction: column;
   }
 }
+
+
+.alias-dictionary-panel {
+  border-color: rgba(96, 165, 250, 0.22);
+}
+
+.dictionary-control-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 12px;
+  margin: 14px 0 16px;
+}
+
+.dictionary-control-card {
+  padding: 13px 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.085);
+}
+
+.dictionary-control-card span {
+  display: block;
+  color: rgba(255,255,255,0.62);
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.dictionary-control-card b {
+  color: rgba(255,255,255,0.94);
+  font-size: 17px;
+}
+
+@media (max-width: 900px) {
+  .dictionary-control-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
