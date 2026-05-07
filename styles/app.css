@@ -283,3 +283,59 @@ tr:hover td {
   color: white;
   outline: none;
 }
+
+/* v7: візуальне маркування рядків */
+tr.row-zero td {
+  background: rgba(248, 113, 113, 0.13);
+  color: rgba(255,255,255,0.92);
+}
+
+tr.row-low td {
+  background: rgba(251, 191, 36, 0.11);
+  color: rgba(255,255,255,0.9);
+}
+
+tr.row-long td {
+  background: rgba(56, 189, 248, 0.07);
+}
+
+tr.row-zero td:first-child {
+  box-shadow: inset 3px 0 0 rgba(248, 113, 113, 0.9);
+}
+
+tr.row-low td:first-child {
+  box-shadow: inset 3px 0 0 rgba(251, 191, 36, 0.85);
+}
+
+tr.row-long td:first-child {
+  box-shadow: inset 3px 0 0 rgba(56, 189, 248, 0.65);
+}
+
+tr.row-zero:hover td,
+tr.row-low:hover td,
+tr.row-long:hover td {
+  background: rgba(88, 101, 242, 0.18);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.status-zero {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.42);
+}
+
+.status-low {
+  background: rgba(251, 191, 36, 0.16);
+  color: #fde68a;
+  border: 1px solid rgba(251, 191, 36, 0.38);
+}
