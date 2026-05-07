@@ -21,8 +21,8 @@ const appVersion = document.getElementById("appVersion");
 function getAppMeta() {
   return window.ART_AMMO_APP_META || {
     appName: "Art Ammo",
-    version: "0.26",
-    buildLabel: "v26-name-normalizer",
+    version: "0.27",
+    buildLabel: "v27-alias-watchlist",
     buildDate: "2026-05-07",
     logicProfile: "Excel локально + аналітика залишків + журнал дій"
   };
@@ -1512,6 +1512,135 @@ function parseAmmoNameRaw(text) {
   };
 }
 
+
+function buildAliasWatchlist(items) {
+  const groups = {
+    projectiles: new Map(),
+    charges: new Map()
+  };
+
+  (items || []).forEach(item => {
+    const rawParsed = parseAmmoNameRaw(item.ammoRaw);
+    if (!rawParsed) return;
+
+    addAlias(groups.projectiles, item.projectileKey || getCanonicalKey(item.projectile), rawParsed.projectile, item.projectile, item);
+    addAlias(groups.charges, item.chargeKey || getCanonicalKey(item.charge), rawParsed.charge, item.charge, item);
+  });
+
+  return {
+    projectiles: mapAliasGroups(groups.projectiles),
+    charges: mapAliasGroups(groups.charges)
+  };
+}
+
+function addAlias(map, key, rawName, normalizedName, item) {
+  const safeKey = cleanCell(key || normalizedName || rawName);
+  if (!safeKey) return;
+
+  if (!map.has(safeKey)) {
+    map.set(safeKey, {
+      key: safeKey,
+      normalizedName: cleanCell(normalizedName || rawName),
+      aliases: new Map(),
+      rows: 0,
+      totalBalance: 0,
+      units: new Set()
+    });
+  }
+
+  const group = map.get(safeKey);
+  const raw = cleanCell(rawName || normalizedName);
+  const balance = Number(item.balance || 0);
+
+  if (!group.aliases.has(raw)) {
+    group.aliases.set(raw, { raw, rows: 0, totalBalance: 0 });
+  }
+
+  const alias = group.aliases.get(raw);
+  alias.rows += 1;
+  alias.totalBalance += balance;
+
+  group.rows += 1;
+  group.totalBalance += balance;
+  if (item.unit) group.units.add(item.unit);
+}
+
+function mapAliasGroups(map) {
+  return Array.from(map.values())
+    .map(group => {
+      const aliases = Array.from(group.aliases.values())
+        .sort((a, b) => b.rows - a.rows || a.raw.localeCompare(b.raw, "uk"));
+
+      const suspicious = aliases.length > 1 || aliases.some(alias => alias.raw !== group.normalizedName);
+
+      return {
+        ...group,
+        aliases,
+        aliasCount: aliases.length,
+        unitsCount: group.units.size,
+        unitsText: Array.from(group.units).sort().join(", "),
+        suspicious
+      };
+    })
+    .filter(group => group.suspicious)
+    .sort((a, b) => b.aliasCount - a.aliasCount || b.rows - a.rows || a.normalizedName.localeCompare(b.normalizedName, "uk"));
+}
+
+function renderAliasWatchlistPanel(items) {
+  const watchlist = buildAliasWatchlist(items || []);
+  const total = watchlist.projectiles.length + watchlist.charges.length;
+
+  const renderRows = (rows, typeLabel) => {
+    if (!rows.length) {
+      return `<tr><td colspan="6" class="muted-cell">Підозрілих варіантів не знайдено</td></tr>`;
+    }
+
+    return rows.slice(0, 40).map(group => `
+      <tr>
+        <td>${typeLabel}</td>
+        <td><b>${escapeHtml(group.normalizedName)}</b><div class="alias-key">${escapeHtml(group.key)}</div></td>
+        <td>${group.aliasCount}</td>
+        <td>${group.rows}</td>
+        <td>${group.totalBalance}</td>
+        <td>${group.aliases.map(alias => `
+          <span class="alias-chip" title="Рядків: ${alias.rows}; залишок: ${alias.totalBalance}">${escapeHtml(alias.raw)}</span>
+        `).join("")}</td>
+      </tr>
+    `).join("");
+  };
+
+  return `
+    <div class="table-panel analysis-table alias-watchlist-panel">
+      <div class="alias-watchlist-header">
+        <div>
+          <h2>Довідник підозрілих назв</h2>
+          <p>Показує різні написання, які система звела до одного ключа. Це список для майбутнього ручного затвердження довідників.</p>
+        </div>
+        <div class="alias-count-pill">${total} груп</div>
+      </div>
+
+      <div class="table-wrap compact-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Тип</th>
+              <th>Канонічна назва / ключ</th>
+              <th>Варіантів</th>
+              <th>Рядків</th>
+              <th>Залишок</th>
+              <th>Варіанти написання</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderRows(watchlist.projectiles, "Снаряд")}
+            ${renderRows(watchlist.charges, "Заряд")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
 function renderNormalizerPanel(items) {
   const stats = getNormalizerStats(items || []);
   const examplesHtml = stats.examples.length
@@ -1843,6 +1972,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     ${renderReportPassport(reportPassport)}
     ${renderDataQualityPanel(dataQuality)}
     ${renderNormalizerPanel(window.ArtAmmoState?.unitItems || unitItems)}
+    ${renderAliasWatchlistPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderAutoDictionariesPanel(autoDictionaries)}
     ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderExchangeRecommendations(exchangeRecommendations)}
