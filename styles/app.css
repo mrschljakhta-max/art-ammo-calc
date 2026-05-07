@@ -798,3 +798,35 @@ tr.row-long:hover td {
   font-size: 13px;
   opacity: 0.86;
 }
+
+.exchange-panel {
+  margin-top: 28px;
+  padding: 22px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.09);
+}
+
+.exchange-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.exchange-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.exchange-header span {
+  opacity: 0.66;
+  font-size: 13px;
+  text-align: right;
+}
+
+.exchange-muted {
+  opacity: 0.62;
+  font-size: 12px;
+}
