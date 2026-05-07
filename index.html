@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.39</div>
+      <div class="core-version">BASTION CORE v0.40</div>
     </aside>
 
     <main class="bastion-main">
@@ -518,13 +518,68 @@
       </section>
 
       <section class="view-panel" data-view-panel="history">
-        <section class="command-panel primary-panel mode-placeholder">
+        <section class="command-panel primary-panel history-center">
           <div class="panel-header compact-header">
             <div>
-              <h2>Історія</h2>
-              <p>Майбутній режим для динаміки, порівняння файлів і історії рішень.</p>
+              <h2>Історія аналізів</h2>
+              <p>Локальний журнал знімків: файл, час аналізу, залишки, критичні позиції та рекомендації.</p>
             </div>
-            <div class="panel-badge">HISTORY</div>
+            <div class="panel-badge">HISTORY CENTER</div>
+          </div>
+
+          <div class="history-command-row">
+            <button id="saveHistorySnapshotBtn" class="analyze-button">Зберегти знімок</button>
+            <button id="exportHistoryBtn" class="analyze-button">Експорт історії JSON</button>
+            <label class="analyze-button history-import-btn">
+              Імпорт історії
+              <input type="file" id="importHistoryFile" accept=".json" hidden>
+            </label>
+            <button id="clearHistoryBtn" class="analyze-button danger-button">Очистити історію</button>
+          </div>
+
+          <div class="history-kpi-grid">
+            <div class="kpi-card kpi-red">
+              <div class="kpi-label">Знімків</div>
+              <div class="kpi-value" id="historySnapshotCount">—</div>
+              <div class="kpi-sub">локально збережено</div>
+            </div>
+            <div class="kpi-card kpi-blue">
+              <div class="kpi-label">Останній файл</div>
+              <div class="kpi-value history-file-kpi" id="historyLastFile">—</div>
+              <div class="kpi-sub">джерело аналізу</div>
+            </div>
+            <div class="kpi-card kpi-amber">
+              <div class="kpi-label">Динаміка залишку</div>
+              <div class="kpi-value" id="historyBalanceDelta">—</div>
+              <div class="kpi-sub">між останніми знімками</div>
+            </div>
+            <div class="kpi-card kpi-green">
+              <div class="kpi-label">Динаміка ризику</div>
+              <div class="kpi-value" id="historyRiskDelta">—</div>
+              <div class="kpi-sub">критичні позиції</div>
+            </div>
+          </div>
+
+          <div class="history-grid">
+            <div class="history-panel">
+              <div class="quality-panel-head">
+                <h3>Лінія часу</h3>
+                <span id="historyTimelineStatus">очікується знімок</span>
+              </div>
+              <div id="historyTimeline" class="history-timeline">
+                <div class="alert-item muted">Збережи перший знімок після аналізу Excel.</div>
+              </div>
+            </div>
+
+            <div class="history-panel">
+              <div class="quality-panel-head">
+                <h3>Порівняння останніх знімків</h3>
+                <span>balance / risk / exchange</span>
+              </div>
+              <div id="historyComparePanel" class="history-compare-panel">
+                <div class="alert-item muted">Для порівняння потрібно мінімум два знімки.</div>
+              </div>
+            </div>
           </div>
         </section>
       </section>
