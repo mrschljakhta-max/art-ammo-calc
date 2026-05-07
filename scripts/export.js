@@ -16,6 +16,13 @@
     }
 
     const grouped = groupByUnit(items);
+    const groupedCategories = typeof groupByCategory === "function"
+      ? groupByCategory(items)
+      : {};
+    const groupedRanges = typeof groupByRangeBand === "function"
+      ? groupByRangeBand(items)
+      : {};
+
     const workbook = XLSX.utils.book_new();
 
     const summaryRows = Object.values(grouped).map(unit => ({
@@ -27,8 +34,39 @@
       "Далекобійних": unit.longRangeBalance
     }));
 
-    const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
-    XLSX.utils.book_append_sheet(workbook, summarySheet, "Підсумок");
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(summaryRows),
+      "Підсумок"
+    );
+
+    const categoryRows = Object.values(groupedCategories).map(category => ({
+      "Категорія": category.category,
+      "Комбінацій": category.combinations.size,
+      "Отримання": category.totalReceived,
+      "Витрата": category.totalSpent,
+      "Залишок": category.totalBalance,
+      "Далекобійних": category.longRangeBalance
+    }));
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(categoryRows),
+      "Категорії"
+    );
+
+    const rangeRows = Object.values(groupedRanges).map(range => ({
+      "Діапазон": range.band,
+      "Комбінацій": range.combinations.size,
+      "Рядків": range.items.length,
+      "Залишок": range.totalBalance
+    }));
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(rangeRows),
+      "Дальності"
+    );
 
     const detailRows = items.map(item => ({
       "Підрозділ": item.unit,
@@ -45,8 +83,11 @@
       "Залишок": item.balance
     }));
 
-    const detailSheet = XLSX.utils.json_to_sheet(detailRows);
-    XLSX.utils.book_append_sheet(workbook, detailSheet, "Детально");
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(detailRows),
+      "Детально"
+    );
 
     Object.values(grouped).forEach(unit => {
       const unitRows = unit.items.map(item => ({
@@ -67,8 +108,11 @@
         .replace(/[\\/?*\[\]:]/g, "")
         .slice(0, 31);
 
-      const unitSheet = XLSX.utils.json_to_sheet(unitRows);
-      XLSX.utils.book_append_sheet(workbook, unitSheet, safeSheetName || "Підрозділ");
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(unitRows),
+        safeSheetName || "Підрозділ"
+      );
     });
 
     const now = new Date();

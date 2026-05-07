@@ -1,11 +1,11 @@
 const analyzeBtn = document.getElementById("analyzeBtn");
 const analysisPanel = document.getElementById("analysisPanel");
-
 const filtersPanel = document.getElementById("filtersPanel");
 const unitFilter = document.getElementById("unitFilter");
 const longRangeOnly = document.getElementById("longRangeOnly");
 const searchFilter = document.getElementById("searchFilter");
 const resetFiltersBtn = document.getElementById("resetFiltersBtn");
+const filterStatus = document.getElementById("filterStatus");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
@@ -25,14 +25,12 @@ function analyzeWorkbook() {
 
   workbook.SheetNames.forEach((sheetName) => {
     const sheet = workbook.Sheets[sheetName];
-
     const rows = XLSX.utils.sheet_to_json(sheet, {
       header: 1,
       defval: ""
     });
 
-    const parsedItems = parseStructuredSheet(sheetName, rows);
-    allItems.push(...parsedItems);
+    allItems.push(...parseStructuredSheet(sheetName, rows));
   });
 
   const unitItems = allItems.filter(item => !item.isSummarySheet);
@@ -45,16 +43,20 @@ function analyzeWorkbook() {
   window.ArtAmmoState.groupedByUnit = grouped;
 
   setupFilters(grouped);
+  updateFilterStatus(unitItems);
 
   document.getElementById("exportExcelBtn").disabled = false;
   document.getElementById("exportPdfBtn").disabled = false;
 
-  renderAnalysis(allItems, unitItems, summaryItems, grouped);
+  if (typeof setStatus === "function") {
+    setStatus(`Проаналізовано: ${unitItems.length} рядків`, "ok");
+  }
+
+  renderAnalysis(unitItems, unitItems, summaryItems, grouped);
 }
 
 function parseStructuredSheet(sheetName, rows) {
   const items = [];
-
   const schema = ART_AMMO_SCHEMA;
   const cols = schema.COLUMNS;
 
@@ -75,7 +77,6 @@ function parseStructuredSheet(sheetName, rows) {
     if (isProbablyHeader(ammoText)) return;
 
     const parsed = parseAmmoName(ammoText);
-
     if (!parsed) return;
 
     const rangeKm = rangeMeters ? rangeMeters / 1000 : null;
@@ -84,27 +85,20 @@ function parseStructuredSheet(sheetName, rows) {
       sheetName,
       unit: sheetName,
       row: rowIndex + 1,
-
       category,
       ammoRaw: ammoText,
-
       projectile: parsed.projectile,
       charge: parsed.charge,
       note: parsed.note,
-
       combination: `${parsed.projectile} + ${parsed.charge}`,
-
       rangeMeters,
       rangeKm,
       rangeLabel: rangeKm ? `${rangeKm.toFixed(1)} км` : "",
-
-      longRange: rangeKm >= schema.LONG_RANGE_KM,
-
+      longRange: Boolean(rangeKm && rangeKm >= schema.LONG_RANGE_KM),
       received,
       spent,
       quantity: balance,
       balance,
-
       isSummarySheet
     });
   });
@@ -114,7 +108,6 @@ function parseStructuredSheet(sheetName, rows) {
 
 function parseAmmoName(text) {
   const value = cleanCell(text);
-
   const match = value.match(/^(.+?)\s*\((.+?)\)(.*)$/);
 
   if (!match) return null;
@@ -197,6 +190,82 @@ function groupByUnit(items) {
   return grouped;
 }
 
+function groupByCategory(items) {
+  const grouped = {};
+
+  items.forEach((item) => {
+    const category = item.category || "Без категорії";
+
+    if (!grouped[category]) {
+      grouped[category] = {
+        category,
+        items: [],
+        totalReceived: 0,
+        totalSpent: 0,
+        totalBalance: 0,
+        longRangeBalance: 0,
+        combinations: new Set()
+      };
+    }
+
+    grouped[category].items.push(item);
+    grouped[category].totalReceived += Number(item.received || 0);
+    grouped[category].totalSpent += Number(item.spent || 0);
+    grouped[category].totalBalance += Number(item.balance || 0);
+
+    if (item.longRange) {
+      grouped[category].longRangeBalance += Number(item.balance || 0);
+    }
+
+    grouped[category].combinations.add(item.combination);
+  });
+
+  return grouped;
+}
+
+function getRangeBand(item) {
+  const km = Number(item.rangeKm || 0);
+
+  if (!km) return "Без дальності";
+  if (km < ART_AMMO_SCHEMA.LONG_RANGE_KM) return `до ${ART_AMMO_SCHEMA.LONG_RANGE_KM} км`;
+  if (km < 25) return `${ART_AMMO_SCHEMA.LONG_RANGE_KM}–25 км`;
+  if (km < 30) return `25–30 км`;
+  return `30+ км`;
+}
+
+function groupByRangeBand(items) {
+  const grouped = {};
+
+  items.forEach((item) => {
+    const band = getRangeBand(item);
+
+    if (!grouped[band]) {
+      grouped[band] = {
+        band,
+        items: [],
+        totalBalance: 0,
+        combinations: new Set()
+      };
+    }
+
+    grouped[band].items.push(item);
+    grouped[band].totalBalance += Number(item.balance || 0);
+    grouped[band].combinations.add(item.combination);
+  });
+
+  const order = [
+    `до ${ART_AMMO_SCHEMA.LONG_RANGE_KM} км`,
+    `${ART_AMMO_SCHEMA.LONG_RANGE_KM}–25 км`,
+    `25–30 км`,
+    `30+ км`,
+    "Без дальності"
+  ];
+
+  return Object.fromEntries(
+    Object.entries(grouped).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))
+  );
+}
+
 function setupFilters(grouped) {
   const previousUnit = unitFilter.value || "all";
 
@@ -220,17 +289,12 @@ function applyFilters() {
   const filtered = getCurrentFilteredItems();
   const grouped = groupByUnit(filtered);
 
-  renderAnalysis(
-    filtered,
-    filtered,
-    [],
-    grouped
-  );
+  updateFilterStatus(filtered);
+  renderAnalysis(filtered, filtered, [], grouped);
 }
 
 function getCurrentFilteredItems() {
   const items = window.ArtAmmoState?.unitItems || [];
-
   let filtered = [...items];
 
   if (unitFilter.value !== "all") {
@@ -248,7 +312,8 @@ function getCurrentFilteredItems() {
       String(item.unit).toLowerCase().includes(searchValue) ||
       String(item.projectile).toLowerCase().includes(searchValue) ||
       String(item.charge).toLowerCase().includes(searchValue) ||
-      String(item.category).toLowerCase().includes(searchValue)
+      String(item.category).toLowerCase().includes(searchValue) ||
+      String(item.note).toLowerCase().includes(searchValue)
     );
   }
 
@@ -259,14 +324,27 @@ function resetFilters() {
   unitFilter.value = "all";
   longRangeOnly.checked = false;
   searchFilter.value = "";
-
   applyFilters();
+}
+
+function updateFilterStatus(items) {
+  const total = window.ArtAmmoState?.unitItems?.length || 0;
+  const active = [];
+
+  if (unitFilter.value !== "all") active.push(`підрозділ: ${unitFilter.value}`);
+  if (longRangeOnly.checked) active.push("тільки далекобійні");
+  if (searchFilter.value.trim()) active.push(`пошук: ${searchFilter.value.trim()}`);
+
+  filterStatus.hidden = false;
+  filterStatus.textContent = active.length
+    ? `Показано ${items.length} з ${total}. Активні фільтри: ${active.join(", ")}.`
+    : `Показано всі рядки: ${items.length}.`;
 }
 
 function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   if (!allItems.length) {
     analysisPanel.innerHTML = `
-      <p>
+      <p class="empty-message">
         Не знайдено структурованих рядків у колонці <b>C</b>
         формату <b>Снаряд (Заряд)</b>.
       </p>
@@ -274,49 +352,39 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     return;
   }
 
-  const unitTotalBalance = unitItems.reduce(
-    (sum, item) => sum + Number(item.balance || 0),
-    0
-  );
-
+  const unitTotalBalance = unitItems.reduce((sum, item) => sum + Number(item.balance || 0), 0);
   const unitLongRangeBalance = unitItems
     .filter(item => item.longRange)
     .reduce((sum, item) => sum + Number(item.balance || 0), 0);
-
-  const summaryTotalBalance = summaryItems.reduce(
-    (sum, item) => sum + Number(item.balance || 0),
-    0
-  );
-
-  const uniqueCombinations = new Set(
-    unitItems.map(item => item.combination)
-  ).size;
-
+  const unitShortRangeBalance = unitTotalBalance - unitLongRangeBalance;
+  const summaryTotalBalance = summaryItems.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+  const uniqueCombinations = new Set(unitItems.map(item => item.combination)).size;
   const unitCount = Object.keys(grouped).length;
+  const groupedByCategory = groupByCategory(unitItems);
+  const groupedByRangeBand = groupByRangeBand(unitItems);
 
   let html = `
     <div class="analysis-grid">
-
       <div class="metric-card">
         <div class="metric-label">Підрозділів</div>
         <div class="metric-value">${unitCount}</div>
       </div>
-
       <div class="metric-card">
         <div class="metric-label">Комбінацій</div>
         <div class="metric-value">${uniqueCombinations}</div>
       </div>
-
       <div class="metric-card">
-        <div class="metric-label">Залишок по підрозділах</div>
+        <div class="metric-label">Залишок</div>
         <div class="metric-value">${unitTotalBalance}</div>
       </div>
-
       <div class="metric-card">
         <div class="metric-label">Далекобійних</div>
         <div class="metric-value">${unitLongRangeBalance}</div>
       </div>
-
+      <div class="metric-card">
+        <div class="metric-label">Недалекобійних</div>
+        <div class="metric-value">${unitShortRangeBalance}</div>
+      </div>
     </div>
   `;
 
@@ -324,31 +392,15 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     html += `
       <div class="table-panel analysis-table">
         <h2>Контрольна звірка</h2>
-
-        <div class="table-wrap">
+        <div class="table-wrap compact-wrap">
           <table>
             <thead>
-              <tr>
-                <th>Показник</th>
-                <th>Значення</th>
-              </tr>
+              <tr><th>Показник</th><th>Значення</th></tr>
             </thead>
-
             <tbody>
-              <tr>
-                <td>Залишок по аркушах підрозділів</td>
-                <td>${unitTotalBalance}</td>
-              </tr>
-
-              <tr>
-                <td>Залишок по зведеному аркушу ${ART_AMMO_SCHEMA.SUMMARY_SHEET_NAME}</td>
-                <td>${summaryTotalBalance}</td>
-              </tr>
-
-              <tr>
-                <td>Різниця</td>
-                <td>${unitTotalBalance - summaryTotalBalance}</td>
-              </tr>
+              <tr><td>Залишок по аркушах підрозділів</td><td>${unitTotalBalance}</td></tr>
+              <tr><td>Залишок по зведеному аркушу ${ART_AMMO_SCHEMA.SUMMARY_SHEET_NAME}</td><td>${summaryTotalBalance}</td></tr>
+              <tr><td>Різниця</td><td>${unitTotalBalance - summaryTotalBalance}</td></tr>
             </tbody>
           </table>
         </div>
@@ -359,8 +411,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   html += `
     <div class="table-panel analysis-table">
       <h2>Підсумок по підрозділах</h2>
-
-      <div class="table-wrap">
+      <div class="table-wrap compact-wrap">
         <table>
           <thead>
             <tr>
@@ -372,14 +423,13 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
               <th>Далекобійних</th>
             </tr>
           </thead>
-
           <tbody>
   `;
 
   Object.values(grouped).forEach((unitData) => {
     html += `
       <tr>
-        <td>${unitData.unit}</td>
+        <td>${escapeHtml(unitData.unit)}</td>
         <td>${unitData.combinations.size}</td>
         <td>${unitData.totalReceived}</td>
         <td>${unitData.totalSpent}</td>
@@ -396,8 +446,75 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     </div>
 
     <div class="table-panel analysis-table">
-      <h2>Детальний аналіз по підрозділах</h2>
+      <h2>Підсумок по категоріях</h2>
+      <div class="table-wrap compact-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Категорія</th>
+              <th>Комбінацій</th>
+              <th>Отримання</th>
+              <th>Витрата</th>
+              <th>Залишок</th>
+              <th>Далекобійних</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
 
+  Object.values(groupedByCategory).forEach((categoryData) => {
+    html += `
+      <tr>
+        <td>${escapeHtml(categoryData.category)}</td>
+        <td>${categoryData.combinations.size}</td>
+        <td>${categoryData.totalReceived}</td>
+        <td>${categoryData.totalSpent}</td>
+        <td>${categoryData.totalBalance}</td>
+        <td>${categoryData.longRangeBalance}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-panel analysis-table">
+      <h2>Розподіл по дальності</h2>
+      <div class="table-wrap compact-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Діапазон</th>
+              <th>Комбінацій</th>
+              <th>Рядків</th>
+              <th>Залишок</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+
+  Object.values(groupedByRangeBand).forEach((bandData) => {
+    html += `
+      <tr>
+        <td>${escapeHtml(bandData.band)}</td>
+        <td>${bandData.combinations.size}</td>
+        <td>${bandData.items.length}</td>
+        <td>${bandData.totalBalance}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-panel analysis-table">
+      <h2>Детальний аналіз по підрозділах</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -416,19 +533,18 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
               <th>Залишок</th>
             </tr>
           </thead>
-
           <tbody>
   `;
 
   unitItems.forEach((item) => {
     html += `
       <tr>
-        <td>${item.unit}</td>
+        <td>${escapeHtml(item.unit)}</td>
         <td>${item.row}</td>
-        <td>${item.category}</td>
-        <td>${item.projectile}</td>
-        <td>${item.charge}</td>
-        <td>${item.note}</td>
+        <td>${escapeHtml(item.category)}</td>
+        <td>${escapeHtml(item.projectile)}</td>
+        <td>${escapeHtml(item.charge)}</td>
+        <td>${escapeHtml(item.note)}</td>
         <td>${item.rangeMeters || ""}</td>
         <td>${item.rangeKm ? item.rangeKm.toFixed(1) : ""}</td>
         <td>${item.longRange ? "Так" : "Ні"}</td>
@@ -447,4 +563,14 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   `;
 
   analysisPanel.innerHTML = html;
+}
+
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
