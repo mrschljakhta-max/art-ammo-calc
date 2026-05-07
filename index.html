@@ -79,6 +79,10 @@
           <span class="nav-icon">⚙</span>
           <span>Налаштування</span>
         </button>
+        <button class="side-nav-item" data-view="diagnostics">
+          <span class="nav-icon">⌁</span>
+          <span>Діагностика</span>
+        </button>
       </nav>
 
       <div class="system-card">
@@ -89,7 +93,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.41</div>
+      <div class="core-version"><span id="appVersion">BASTION CORE v0.43</span></div>
     </aside>
 
     <main class="bastion-main">
@@ -102,6 +106,7 @@
           <button class="top-tab" data-view="quality">Quality</button>
           <button class="top-tab" data-view="reports">Reports</button>
           <button class="top-tab" data-view="settings">Settings</button>
+          <button class="top-tab" data-view="diagnostics">Diagnostics</button>
         </div>
 
         <div class="top-status">
@@ -286,6 +291,28 @@
               placeholder="Пошук: снаряд, заряд, підрозділ..."
             >
 
+            <label class="filter-check threshold-control">
+              Малий залишок ≤
+              <input type="number" id="lowBalanceThreshold" min="0" value="10">
+            </label>
+
+            <select id="stockFilter" class="filter-control">
+              <option value="all">Всі залишки</option>
+              <option value="problem">Вузькі місця</option>
+              <option value="zero">Нульові</option>
+              <option value="low">Малий залишок</option>
+            </select>
+
+            <select id="sortFilter" class="filter-control">
+              <option value="default">Як у файлі</option>
+              <option value="balance-asc">Залишок ↑</option>
+              <option value="balance-desc">Залишок ↓</option>
+              <option value="range-asc">Дальність ↑</option>
+              <option value="range-desc">Дальність ↓</option>
+              <option value="unit-asc">Підрозділ А-Я</option>
+              <option value="projectile-asc">Снаряд А-Я</option>
+            </select>
+
             <button id="resetFiltersBtn" class="analyze-button">
               Скинути фільтри
             </button>
@@ -302,6 +329,19 @@
 
           <section class="command-panel analysis-panel-shell">
             <div id="analysisPanel"></div>
+
+            <div class="legacy-controls" hidden>
+              <select id="actionPriorityFilter"><option value="all">Всі пріоритети</option></select>
+              <label><input type="checkbox" id="actionLongOnly"> Тільки далекобійні дії</label>
+              <select id="actionStatusFilter"><option value="all">Всі статуси</option></select>
+              <button id="exportStatusesBtn" type="button">Експорт статусів</button>
+              <input type="file" id="importStatusesFile" accept=".json">
+              <button id="exportDecisionPackageBtn" type="button">Пакет рішення</button>
+              <input type="file" id="importDecisionPackageFile" accept=".json,.zip">
+              <button id="exportAliasDictionaryBtn" type="button">Експорт словника</button>
+              <input type="file" id="importAliasDictionaryFile" accept=".json">
+              <button id="resetAliasDictionaryBtn" type="button">Скинути словник</button>
+            </div>
           </section>
         </section>
       </section>
@@ -713,9 +753,41 @@
           </section>
         </section>
       </section>
+
+      <section class="view-panel" data-view-panel="diagnostics">
+        <section class="command-panel primary-panel settings-hero">
+          <div class="panel-header">
+            <div>
+              <h1>Діагностика системи</h1>
+              <p>Контроль готовності BASTION: бібліотеки, DOM, localStorage, стан імпорту та аналітики.</p>
+            </div>
+            <div class="panel-badge">SYSTEM CHECK</div>
+          </div>
+
+          <div id="diagnosticsSummary" class="diagnostics-summary"></div>
+          <div id="diagnosticsMeta" class="diagnostics-meta"></div>
+
+          <div class="diagnostics-actions">
+            <button id="diagnosticsRunBtn" class="context-action">Перевірити зараз</button>
+            <button id="diagnosticsExportBtn" class="context-action ghost">Експорт JSON</button>
+            <button id="diagnosticsCopyBtn" class="context-action ghost">Копіювати підсумок</button>
+          </div>
+
+          <div id="diagnosticsMessage" class="settings-message">Діагностика виконується локально в браузері.</div>
+        </section>
+
+        <section class="command-panel settings-panel diagnostics-panel">
+          <div class="quality-panel-head">
+            <h3>Журнал перевірок</h3>
+            <span>runtime health report</span>
+          </div>
+          <div id="diagnosticsTable" class="table-wrap diagnostics-table"></div>
+        </section>
+      </section>
     </main>
   </div>
 
+  <script src="./scripts/system.js"></script>
   <script src="./scripts/schema.js"></script>
   <script src="./scripts/normalizer.js"></script>
   <script src="./scripts/excel.js"></script>
@@ -723,5 +795,6 @@
   <script src="./scripts/export.js"></script>
   <script src="./scripts/export-pdf.js"></script>
   <script src="./scripts/navigation.js"></script>
+  <script src="./scripts/diagnostics.js"></script>
 </body>
 </html>
