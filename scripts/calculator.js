@@ -773,7 +773,180 @@ function setupFilters(grouped) {
     unitFilter.value = previousUnit;
   }
 
+  setupCompareControls(grouped);
+
   filtersPanel.hidden = false;
+}
+
+
+function setupCompareControls(grouped) {
+  if (!filtersPanel) return;
+
+  let comparePanel = document.getElementById("comparePanel");
+
+  if (!comparePanel) {
+    comparePanel = document.createElement("div");
+    comparePanel.id = "comparePanel";
+    comparePanel.className = "compare-panel";
+    comparePanel.innerHTML = `
+      <div class="compare-title">Порівняння підрозділів</div>
+      <select id="compareUnitA" class="filter-control">
+        <option value="">Підрозділ A</option>
+      </select>
+      <select id="compareUnitB" class="filter-control">
+        <option value="">Підрозділ B</option>
+      </select>
+    `;
+    filtersPanel.insertAdjacentElement("afterend", comparePanel);
+  }
+
+  const compareUnitA = document.getElementById("compareUnitA");
+  const compareUnitB = document.getElementById("compareUnitB");
+
+  const previousA = compareUnitA.value;
+  const previousB = compareUnitB.value;
+  const unitNames = Object.keys(grouped);
+
+  compareUnitA.innerHTML = `<option value="">Підрозділ A</option>`;
+  compareUnitB.innerHTML = `<option value="">Підрозділ B</option>`;
+
+  unitNames.forEach(unitName => {
+    const optionA = document.createElement("option");
+    optionA.value = unitName;
+    optionA.textContent = unitName;
+    compareUnitA.appendChild(optionA);
+
+    const optionB = document.createElement("option");
+    optionB.value = unitName;
+    optionB.textContent = unitName;
+    compareUnitB.appendChild(optionB);
+  });
+
+  if (unitNames.includes(previousA)) compareUnitA.value = previousA;
+  if (unitNames.includes(previousB)) compareUnitB.value = previousB;
+
+  compareUnitA.onchange = applyFilters;
+  compareUnitB.onchange = applyFilters;
+}
+
+function getComparisonData(items) {
+  const compareUnitA = document.getElementById("compareUnitA");
+  const compareUnitB = document.getElementById("compareUnitB");
+
+  if (!compareUnitA || !compareUnitB) return null;
+
+  const unitA = compareUnitA.value;
+  const unitB = compareUnitB.value;
+
+  if (!unitA || !unitB || unitA === unitB) return null;
+
+  const aItems = items.filter(item => item.unit === unitA);
+  const bItems = items.filter(item => item.unit === unitB);
+
+  const sum = (arr, key) => arr.reduce((total, item) => total + Number(item[key] || 0), 0);
+  const countZero = arr => arr.filter(item => Number(item.balance || 0) === 0).length;
+  const countLow = arr => arr.filter(item => {
+    const balance = Number(item.balance || 0);
+    return balance > 0 && balance <= getLowBalanceThreshold();
+  }).length;
+
+  const a = {
+    unit: unitA,
+    rows: aItems.length,
+    received: sum(aItems, "received"),
+    spent: sum(aItems, "spent"),
+    balance: sum(aItems, "balance"),
+    longRange: sum(aItems.filter(item => item.longRange), "balance"),
+    zero: countZero(aItems),
+    low: countLow(aItems)
+  };
+
+  const b = {
+    unit: unitB,
+    rows: bItems.length,
+    received: sum(bItems, "received"),
+    spent: sum(bItems, "spent"),
+    balance: sum(bItems, "balance"),
+    longRange: sum(bItems.filter(item => item.longRange), "balance"),
+    zero: countZero(bItems),
+    low: countLow(bItems)
+  };
+
+  return { a, b };
+}
+
+function renderComparisonPanel(items) {
+  const data = getComparisonData(items);
+
+  if (!data) return "";
+
+  const rows = [
+    ["Рядків", data.a.rows, data.b.rows],
+    ["Отримання", data.a.received, data.b.received],
+    ["Витрата", data.a.spent, data.b.spent],
+    ["Залишок", data.a.balance, data.b.balance],
+    ["Далекобійних", data.a.longRange, data.b.longRange],
+    ["Нульових позицій", data.a.zero, data.b.zero],
+    ["Малих залишків", data.a.low, data.b.low]
+  ];
+
+  const strongerBalance = data.a.balance === data.b.balance
+    ? "Загальний залишок однаковий."
+    : data.a.balance > data.b.balance
+      ? `${data.a.unit} має більший загальний залишок на ${data.a.balance - data.b.balance}.`
+      : `${data.b.unit} має більший загальний залишок на ${data.b.balance - data.a.balance}.`;
+
+  const strongerLong = data.a.longRange === data.b.longRange
+    ? "Далекобійний залишок однаковий."
+    : data.a.longRange > data.b.longRange
+      ? `${data.a.unit} має більший далекобійний залишок на ${data.a.longRange - data.b.longRange}.`
+      : `${data.b.unit} має більший далекобійний залишок на ${data.b.longRange - data.a.longRange}.`;
+
+  const riskA = data.a.zero + data.a.low;
+  const riskB = data.b.zero + data.b.low;
+  const riskLine = riskA === riskB
+    ? "Кількість проблемних позицій однакова."
+    : riskA > riskB
+      ? `${data.a.unit} має більше проблемних позицій на ${riskA - riskB}.`
+      : `${data.b.unit} має більше проблемних позицій на ${riskB - riskA}.`;
+
+  return `
+    <div class="comparison-result-panel">
+      <div class="comparison-header">
+        <h2>Порівняння підрозділів</h2>
+        <span>${escapeHtml(data.a.unit)} ↔ ${escapeHtml(data.b.unit)}</span>
+      </div>
+
+      <div class="table-wrap compact-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Показник</th>
+              <th>${escapeHtml(data.a.unit)}</th>
+              <th>${escapeHtml(data.b.unit)}</th>
+              <th>Різниця A-B</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr>
+                <td>${escapeHtml(row[0])}</td>
+                <td>${row[1]}</td>
+                <td>${row[2]}</td>
+                <td>${Number(row[1]) - Number(row[2])}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="comparison-notes">
+        <div>${escapeHtml(strongerBalance)}</div>
+        <div>${escapeHtml(strongerLong)}</div>
+        <div>${escapeHtml(riskLine)}</div>
+      </div>
+    </div>
+  `;
 }
 
 function applyFilters() {
@@ -1027,6 +1200,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     </div>
 
     ${renderReportPassport(reportPassport)}
+    ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderRecommendations(recommendations)}
     ${renderCommanderSummary(commanderSummary)}
   `;
