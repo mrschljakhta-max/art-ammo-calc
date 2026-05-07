@@ -107,7 +107,7 @@
 
     return {
       app: "BASTION",
-      version: "v0.40",
+      version: "v0.41",
       generatedAt: now.toISOString(),
       sourceFileName: state.sourceFileName || "unknown",
       filters: getReportFilterLabel(),
@@ -338,7 +338,7 @@
     return {
       id: `snapshot_${Date.now()}`,
       app: "BASTION",
-      version: "v0.40",
+      version: "v0.41",
       createdAt: new Date().toISOString(),
       sourceFileName: state.sourceFileName || document.getElementById("dashFileState")?.textContent || "unknown",
       rows: items.length,
@@ -378,7 +378,7 @@
 
     const payload = {
       app: "BASTION",
-      version: "v0.40",
+      version: "v0.41",
       exportedAt: new Date().toISOString(),
       snapshots
     };
@@ -706,12 +706,171 @@
     ` : `<div class="alert-item muted">Завантаж файл, щоб активувати PDF, Excel і пакет рішення.</div>`);
   }
 
+
+
+  const BASTION_SETTINGS_KEY = "bastion_settings_v1";
+  const BASTION_DEFAULT_SETTINGS = {
+    lowStockThreshold: 10,
+    longRangeKm: 18,
+    defaultView: "dashboard",
+    logicProfile: "balanced",
+    autoAnalyze: true,
+    autoOpenAnalytics: true,
+    showQualityOnDashboard: true,
+    exportPrefix: "bastion",
+    reportMarker: "BASTION REPORT"
+  };
+
+  function readBastionSettings() {
+    try {
+      const raw = localStorage.getItem(BASTION_SETTINGS_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return { ...BASTION_DEFAULT_SETTINGS, ...parsed };
+    } catch (error) {
+      return { ...BASTION_DEFAULT_SETTINGS };
+    }
+  }
+
+  function writeBastionSettings(settings) {
+    localStorage.setItem(BASTION_SETTINGS_KEY, JSON.stringify(settings, null, 2));
+    window.BastionSettings = settings;
+  }
+
+  function applyBastionSettings(settings = readBastionSettings()) {
+    window.BastionSettings = settings;
+
+    const lowStockInput = document.getElementById("lowStockThreshold");
+    if (lowStockInput) lowStockInput.value = settings.lowStockThreshold;
+
+    if (window.ART_AMMO_SCHEMA && Number.isFinite(Number(settings.longRangeKm))) {
+      window.ART_AMMO_SCHEMA.LONG_RANGE_KM = Number(settings.longRangeKm);
+    }
+
+    setText("settingsLogicProfileState", settings.logicProfile);
+    setText("settingsLowStockState", `≤ ${settings.lowStockThreshold}`);
+    setText("settingsLongRangeState", `від ${settings.longRangeKm} км`);
+    setText("settingsDefaultViewState", settings.defaultView);
+  }
+
+  function fillSettingsForm(settings = readBastionSettings()) {
+    const fields = {
+      settingsLowStockThreshold: settings.lowStockThreshold,
+      settingsLongRangeKm: settings.longRangeKm,
+      settingsDefaultView: settings.defaultView,
+      settingsLogicProfile: settings.logicProfile,
+      settingsExportPrefix: settings.exportPrefix,
+      settingsReportMarker: settings.reportMarker
+    };
+
+    Object.entries(fields).forEach(([id, value]) => {
+      const node = document.getElementById(id);
+      if (node) node.value = value;
+    });
+
+    const checks = {
+      settingsAutoAnalyze: settings.autoAnalyze,
+      settingsAutoOpenAnalytics: settings.autoOpenAnalytics,
+      settingsShowQualityOnDashboard: settings.showQualityOnDashboard
+    };
+
+    Object.entries(checks).forEach(([id, value]) => {
+      const node = document.getElementById(id);
+      if (node) node.checked = Boolean(value);
+    });
+  }
+
+  function collectSettingsFromForm() {
+    return {
+      lowStockThreshold: Math.max(0, Number(document.getElementById("settingsLowStockThreshold")?.value || 10)),
+      longRangeKm: Math.max(0, Number(document.getElementById("settingsLongRangeKm")?.value || 18)),
+      defaultView: document.getElementById("settingsDefaultView")?.value || "dashboard",
+      logicProfile: document.getElementById("settingsLogicProfile")?.value || "balanced",
+      autoAnalyze: Boolean(document.getElementById("settingsAutoAnalyze")?.checked),
+      autoOpenAnalytics: Boolean(document.getElementById("settingsAutoOpenAnalytics")?.checked),
+      showQualityOnDashboard: Boolean(document.getElementById("settingsShowQualityOnDashboard")?.checked),
+      exportPrefix: String(document.getElementById("settingsExportPrefix")?.value || "bastion").trim() || "bastion",
+      reportMarker: String(document.getElementById("settingsReportMarker")?.value || "BASTION REPORT").trim() || "BASTION REPORT"
+    };
+  }
+
+  function setSettingsMessage(text, tone = "") {
+    const node = document.getElementById("settingsMessage");
+    if (!node) return;
+    node.textContent = text;
+    node.classList.remove("ok", "warn");
+    if (tone) node.classList.add(tone);
+  }
+
+  function saveSettingsFromForm() {
+    const settings = collectSettingsFromForm();
+    writeBastionSettings(settings);
+    applyBastionSettings(settings);
+    setSettingsMessage("Налаштування збережено. Наступні звіти та аналізи використовуватимуть ці параметри.", "ok");
+    updateDashboardMetrics();
+  }
+
+  function resetSettingsToDefault() {
+    writeBastionSettings({ ...BASTION_DEFAULT_SETTINGS });
+    fillSettingsForm(BASTION_DEFAULT_SETTINGS);
+    applyBastionSettings(BASTION_DEFAULT_SETTINGS);
+    setSettingsMessage("Налаштування скинуто до базового профілю BASTION.", "warn");
+    updateDashboardMetrics();
+  }
+
+  function exportBastionSettings() {
+    const settings = readBastionSettings();
+    const payload = {
+      app: "BASTION",
+      version: "v0.41",
+      exportedAt: new Date().toISOString(),
+      settings
+    };
+    const date = new Date().toISOString().slice(0, 10);
+    downloadTextFile(`bastion_settings_${date}.json`, JSON.stringify(payload, null, 2));
+  }
+
+  function importBastionSettings(file) {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || "{}"));
+        const imported = parsed.settings || parsed;
+        const settings = { ...BASTION_DEFAULT_SETTINGS, ...imported };
+        writeBastionSettings(settings);
+        fillSettingsForm(settings);
+        applyBastionSettings(settings);
+        setSettingsMessage(`Імпортовано налаштування з файлу: ${file.name}`, "ok");
+        updateDashboardMetrics();
+      } catch (error) {
+        setSettingsMessage("Не вдалося імпортувати JSON налаштувань.", "warn");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function bindSettingsCenter() {
+    const settings = readBastionSettings();
+    fillSettingsForm(settings);
+    applyBastionSettings(settings);
+
+    document.getElementById("settingsSaveBtn")?.addEventListener("click", saveSettingsFromForm);
+    document.getElementById("settingsResetBtn")?.addEventListener("click", resetSettingsToDefault);
+    document.getElementById("settingsExportBtn")?.addEventListener("click", exportBastionSettings);
+    document.getElementById("settingsImportFile")?.addEventListener("change", event => {
+      importBastionSettings(event.target.files?.[0]);
+      event.target.value = "";
+    });
+  }
+
   const analysisPanel = document.getElementById("analysisPanel");
   if (analysisPanel) {
     const observer = new MutationObserver(updateDashboardMetrics);
     observer.observe(analysisPanel, { childList: true, subtree: true });
   }
 
+  bindSettingsCenter();
   bindReportsCenter();
   bindHistoryCenter();
   updateHistoryCenter();
