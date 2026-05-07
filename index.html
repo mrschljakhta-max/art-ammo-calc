@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.36</div>
+      <div class="core-version">BASTION CORE v0.37</div>
     </aside>
 
     <main class="bastion-main">
@@ -379,16 +379,64 @@
       </section>
 
       <section class="view-panel" data-view-panel="imports">
-        <section class="command-panel primary-panel mode-placeholder">
+        <section class="command-panel primary-panel import-center">
           <div class="panel-header compact-header">
             <div>
               <h2>Імпорт</h2>
-              <p>Окремий режим для завантаження Excel, перевірки структури та попереднього перегляду аркушів.</p>
+              <p>Майстер завантаження Excel, контролю структури та попереднього огляду аркушів.</p>
             </div>
-            <div class="panel-badge">IMPORT</div>
+            <div class="panel-badge">IMPORT CENTER</div>
           </div>
-          <div class="context-note">Імпорт уже доступний на Dashboard. Наступним кроком сюди винесемо окремий майстер перевірки структури Excel, схеми колонок і попередньої валідації файлу.</div>
-          <button class="context-action" data-view="dashboard">Повернутися до завантаження</button>
+
+          <div class="import-hero-grid">
+            <div class="import-drop-card">
+              <div class="import-drop-icon">⬆</div>
+              <div>
+                <h3>Завантажити бойовий Excel</h3>
+                <p>Файл читається локально у браузері. Дані не відправляються на сервер.</p>
+              </div>
+              <label for="excelFile" class="context-action import-main-action">Обрати Excel-файл</label>
+            </div>
+
+            <div class="import-status-card">
+              <div class="ops-title">Стан імпорту</div>
+              <div class="ops-row"><span>Файл</span><strong id="importFileName">очікується</strong></div>
+              <div class="ops-row"><span>Аркушів</span><strong id="importSheetCount">—</strong></div>
+              <div class="ops-row"><span>Структура</span><strong id="importSchemaState">—</strong></div>
+              <div class="ops-row"><span>Аналіз</span><strong id="importAnalysisState">—</strong></div>
+            </div>
+          </div>
+
+          <div class="import-schema-grid">
+            <div class="schema-check-card" id="schemaSummarySheetCard">
+              <span class="schema-dot"></span>
+              <div>
+                <strong>Зведений аркуш</strong>
+                <p id="schemaSummarySheetText">АГ3+АР</p>
+              </div>
+            </div>
+            <div class="schema-check-card" id="schemaUnitSheetsCard">
+              <span class="schema-dot"></span>
+              <div>
+                <strong>Аркуші підрозділів</strong>
+                <p id="schemaUnitSheetsText">очікується файл</p>
+              </div>
+            </div>
+            <div class="schema-check-card" id="schemaColumnMapCard">
+              <span class="schema-dot"></span>
+              <div>
+                <strong>Схема колонок</strong>
+                <p id="schemaColumnMapText">C/D/E/F/G</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-panel import-sheet-panel">
+            <h2>Аркуші файлу</h2>
+            <div id="importSheetPreview" class="import-sheet-list">
+              <div class="alert-item muted">Після завантаження Excel тут з’явиться перелік аркушів.</div>
+            </div>
+          </div>
         </section>
       </section>
 
