@@ -1,75 +1,108 @@
-const exportExcelBtn = document.getElementById("exportExcelBtn");
+const excelInput = document.getElementById("excelFile");
+const fileInfo = document.getElementById("fileInfo");
+const sheetList = document.getElementById("sheetList");
 
-exportExcelBtn.addEventListener("click", exportAnalysisToExcel);
+let currentWorkbook = null;
 
-function exportAnalysisToExcel() {
-  const items = typeof getCurrentFilteredItems === "function"
-    ? getCurrentFilteredItems()
-    : (window.ArtAmmoState?.unitItems || []);
+window.ArtAmmoState = {
+  workbook: null,
+  analysisItems: [],
+  unitItems: [],
+  summaryItems: [],
+  groupedByUnit: {}
+};
 
-  if (!items.length) {
-    alert("Немає даних для експорту. Спочатку натисни «Аналізувати файл».");
+excelInput.addEventListener("change", handleExcel);
+
+function handleExcel(event) {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  fileInfo.innerHTML = `<p>Файл: ${file.name}</p>`;
+
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    const data = new Uint8Array(e.target.result);
+
+    currentWorkbook = XLSX.read(data, {
+      type: "array",
+      cellDates: true
+    });
+
+    window.ArtAmmoState.workbook = currentWorkbook;
+
+    document.getElementById("analyzeBtn").disabled = false;
+
+    renderSheets(currentWorkbook);
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+function renderSheets(workbook) {
+  sheetList.innerHTML = "";
+
+  workbook.SheetNames.forEach((sheetName) => {
+    const div = document.createElement("div");
+
+    div.className = "sheet-item";
+    div.textContent = sheetName;
+
+    div.addEventListener("click", () => {
+      renderSheetTable(sheetName);
+    });
+
+    sheetList.appendChild(div);
+  });
+}
+
+function renderSheetTable(sheetName) {
+  const sheet = currentWorkbook.Sheets[sheetName];
+
+  const rows = XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    defval: ""
+  });
+
+  if (!rows.length) {
+    sheetList.innerHTML += `<p>Аркуш порожній</p>`;
     return;
   }
 
-  const grouped = groupByUnit(items);
-  const workbook = XLSX.utils.book_new();
+  let html = `
+    <div class="table-panel">
+      <h2>${sheetName}</h2>
+      <div class="table-wrap">
+        <table>
+  `;
 
-  const summaryRows = Object.values(grouped).map(unit => ({
-    "Підрозділ": unit.unit,
-    "Комбінацій": unit.combinations.size,
-    "Отримання": unit.totalReceived,
-    "Витрата": unit.totalSpent,
-    "Залишок": unit.totalBalance,
-    "Далекобійних": unit.longRangeBalance
-  }));
+  rows.forEach((row, rowIndex) => {
+    html += "<tr>";
 
-  const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
-  XLSX.utils.book_append_sheet(workbook, summarySheet, "Підсумок");
+    row.forEach((cell) => {
+      if (rowIndex === 0) {
+        html += `<th>${cell}</th>`;
+      } else {
+        html += `<td>${cell}</td>`;
+      }
+    });
 
-  const detailRows = items.map(item => ({
-    "Підрозділ": item.unit,
-    "Рядок": item.row,
-    "Категорія": item.category,
-    "Снаряд": item.projectile,
-    "Заряд": item.charge,
-    "Примітка": item.note,
-    "Дальність, м": item.rangeMeters || "",
-    "Дальність, км": item.rangeKm ? item.rangeKm.toFixed(1) : "",
-    "Далекобійна": item.longRange ? "Так" : "Ні",
-    "Отримання": item.received,
-    "Витрата": item.spent,
-    "Залишок": item.balance
-  }));
-
-  const detailSheet = XLSX.utils.json_to_sheet(detailRows);
-  XLSX.utils.book_append_sheet(workbook, detailSheet, "Детально");
-
-  Object.values(grouped).forEach(unit => {
-    const unitRows = unit.items.map(item => ({
-      "Рядок": item.row,
-      "Категорія": item.category,
-      "Снаряд": item.projectile,
-      "Заряд": item.charge,
-      "Примітка": item.note,
-      "Дальність, м": item.rangeMeters || "",
-      "Дальність, км": item.rangeKm ? item.rangeKm.toFixed(1) : "",
-      "Далекобійна": item.longRange ? "Так" : "Ні",
-      "Отримання": item.received,
-      "Витрата": item.spent,
-      "Залишок": item.balance
-    }));
-
-    const safeSheetName = unit.unit
-      .replace(/[\\/?*\[\]:]/g, "")
-      .slice(0, 31);
-
-    const unitSheet = XLSX.utils.json_to_sheet(unitRows);
-    XLSX.utils.book_append_sheet(workbook, unitSheet, safeSheetName);
+    html += "</tr>";
   });
 
-  const now = new Date();
-  const fileDate = now.toISOString().slice(0, 10);
+  html += `
+        </table>
+      </div>
+    </div>
+  `;
 
-  XLSX.writeFile(workbook, `art_ammo_export_${fileDate}.xlsx`);
+  const oldPanel = document.querySelector(".table-panel");
+
+  if (oldPanel) oldPanel.remove();
+
+  document
+    .querySelector(".upload-card")
+    .insertAdjacentHTML("beforeend", html);
 }
