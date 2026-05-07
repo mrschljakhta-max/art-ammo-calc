@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.35</div>
+      <div class="core-version">BASTION CORE v0.36</div>
     </aside>
 
     <main class="bastion-main">
@@ -239,6 +239,18 @@
               <span>Дані</span>
               <strong>не зберігаються в хмарі</strong>
             </div>
+            <div class="context-metric">
+              <span>Статус аналізу</span>
+              <strong id="contextAnalysisState">очікує файл</strong>
+            </div>
+
+            <div class="context-alerts">
+              <div class="context-title small-title">Живі попередження</div>
+              <div id="contextAlertList" class="alert-list">
+                <div class="alert-item muted">Завантаж Excel-файл для формування попереджень.</div>
+              </div>
+            </div>
+
             <div class="context-note">
               Завантаж Excel-файл — система автоматично запустить аналіз. Дашборд оновить ключові показники, а детальні блоки залишаються у відповідних режимах.
             </div>
@@ -303,11 +315,12 @@
             </div>
             <div class="panel-badge">EXCHANGE</div>
           </div>
-          <div class="placeholder-grid">
-            <div class="preview-card"><strong>Рекомендації</strong><p>Донор → отримувач, комбінація, кількість.</p></div>
-            <div class="preview-card"><strong>Ефект</strong><p>Що закривається після передачі.</p></div>
-            <div class="preview-card"><strong>Журнал</strong><p>Заплановано / виконано / відхилено.</p></div>
+          <div class="placeholder-grid live-mode-grid">
+            <div class="preview-card"><strong>Рекомендації</strong><p>Донор → отримувач, комбінація, кількість.</p><span id="exchangeRecsPreview" class="mini-value">—</span></div>
+            <div class="preview-card"><strong>Ефект</strong><p>Що закривається після передачі.</p><span id="exchangeImpactPreview" class="mini-value">—</span></div>
+            <div class="preview-card"><strong>Журнал</strong><p>Заплановано / виконано / відхилено.</p><span id="exchangeActionsPreview" class="mini-value">—</span></div>
           </div>
+          <div id="exchangeLiveList" class="mode-live-list"></div>
         </section>
       </section>
 
@@ -320,11 +333,12 @@
             </div>
             <div class="panel-badge">DICTIONARIES</div>
           </div>
-          <div class="placeholder-grid">
-            <div class="preview-card"><strong>Снаряди</strong><p>Канонічні назви та варіанти написання.</p></div>
-            <div class="preview-card"><strong>Заряди</strong><p>Нормалізація й контроль дублів.</p></div>
-            <div class="preview-card"><strong>Комбінації</strong><p>Дальність, далекобійність, залишки.</p></div>
+          <div class="placeholder-grid live-mode-grid">
+            <div class="preview-card"><strong>Снаряди</strong><p>Канонічні назви та варіанти написання.</p><span id="dictProjectilesPreview" class="mini-value">—</span></div>
+            <div class="preview-card"><strong>Заряди</strong><p>Нормалізація й контроль дублів.</p><span id="dictChargesPreview" class="mini-value">—</span></div>
+            <div class="preview-card"><strong>Комбінації</strong><p>Дальність, далекобійність, залишки.</p><span id="dictCombinationsPreview" class="mini-value">—</span></div>
           </div>
+          <div id="dictLiveList" class="mode-live-list"></div>
         </section>
       </section>
 
@@ -337,11 +351,12 @@
             </div>
             <div class="panel-badge">QUALITY</div>
           </div>
-          <div class="placeholder-grid">
-            <div class="preview-card"><strong>Помилки</strong><p>Некоректні рядки й від’ємні значення.</p></div>
-            <div class="preview-card"><strong>Попередження</strong><p>Нульова дальність, дублікати, підозрілі записи.</p></div>
-            <div class="preview-card"><strong>Звірка</strong><p>Підрозділи проти зведеного аркуша.</p></div>
+          <div class="placeholder-grid live-mode-grid">
+            <div class="preview-card"><strong>Помилки</strong><p>Некоректні рядки й від’ємні значення.</p><span id="qualityErrorsPreview" class="mini-value">—</span></div>
+            <div class="preview-card"><strong>Попередження</strong><p>Нульова дальність, дублікати, підозрілі записи.</p><span id="qualityWarningsPreview" class="mini-value">—</span></div>
+            <div class="preview-card"><strong>Звірка</strong><p>Підрозділи проти зведеного аркуша.</p><span id="qualityCheckPreview" class="mini-value">—</span></div>
           </div>
+          <div id="qualityLiveList" class="mode-live-list"></div>
         </section>
       </section>
 
@@ -354,11 +369,12 @@
             </div>
             <div class="panel-badge">REPORTS</div>
           </div>
-          <div class="placeholder-grid">
-            <div class="preview-card"><strong>PDF-звіт</strong><p>Короткий висновок + таблиці.</p></div>
-            <div class="preview-card"><strong>Excel</strong><p>Підсумок, детально, підрозділи.</p></div>
-            <div class="preview-card"><strong>Decision Package</strong><p>JSON/ZIP для передачі та відновлення.</p></div>
+          <div class="placeholder-grid live-mode-grid">
+            <div class="preview-card"><strong>PDF-звіт</strong><p>Короткий висновок + таблиці.</p><span id="reportsPdfPreview" class="mini-value">готово після аналізу</span></div>
+            <div class="preview-card"><strong>Excel</strong><p>Підсумок, детально, підрозділи.</p><span id="reportsExcelPreview" class="mini-value">готово після аналізу</span></div>
+            <div class="preview-card"><strong>Decision Package</strong><p>JSON/ZIP для передачі та відновлення.</p><span id="reportsPackagePreview" class="mini-value">—</span></div>
           </div>
+          <div id="reportsLiveList" class="mode-live-list"></div>
         </section>
       </section>
 
