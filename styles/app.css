@@ -998,3 +998,81 @@ tr.row-long:hover td {
 .action-status-select.status-rejected {
   box-shadow: inset 3px 0 0 rgba(255, 90, 110, 0.95);
 }
+
+.import-status-label {
+  cursor: pointer;
+  user-select: none;
+}
+
+.import-status-label:hover,
+#exportStatusesBtn:hover {
+  transform: translateY(-1px);
+}
+
+.action-integrity-panel {
+  margin-top: 22px;
+  padding: 22px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.09);
+}
+
+.action-integrity-panel.integrity-ok {
+  border-color: rgba(80, 220, 150, 0.28);
+}
+
+.action-integrity-panel.integrity-soft {
+  border-color: rgba(255, 210, 90, 0.28);
+}
+
+.action-integrity-panel.integrity-warning {
+  border-color: rgba(255, 120, 90, 0.34);
+}
+
+.action-integrity-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+  margin-bottom: 16px;
+}
+
+.action-integrity-header h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.action-integrity-header span {
+  opacity: 0.72;
+  font-size: 13px;
+}
+
+.action-integrity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 12px;
+}
+
+.action-integrity-card {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.integrity-card-warning {
+  background: rgba(255, 202, 82, 0.09);
+  border-color: rgba(255, 202, 82, 0.25);
+}
+
+.integrity-card-danger {
+  background: rgba(255, 95, 95, 0.09);
+  border-color: rgba(255, 95, 95, 0.28);
+}
+
+.action-integrity-note {
+  margin-top: 14px;
+  opacity: 0.72;
+  font-size: 12px;
+  line-height: 1.5;
+}
