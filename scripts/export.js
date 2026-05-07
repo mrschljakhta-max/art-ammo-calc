@@ -69,6 +69,29 @@
       const exchangeSheet = XLSX.utils.json_to_sheet(exchangeRows);
       XLSX.utils.book_append_sheet(workbook, exchangeSheet, "Рекомендації обміну");
 
+      if (typeof getExchangeActionPlan === "function") {
+        const actionPlan = getExchangeActionPlan(exchangeRecommendations);
+
+        if (actionPlan.length) {
+          const actionRows = actionPlan.map(item => ({
+            "№": item.order,
+            "Пріоритет": item.priority,
+            "Рівень ризику": item.risk,
+            "Дія": item.action,
+            "Звідки": item.fromUnit,
+            "Куди": item.toUnit,
+            "Було": item.before,
+            "Буде": item.after,
+            "Далекобійна": item.longRange ? "Так" : "Ні",
+            "Дальність, км": item.rangeKm ? item.rangeKm.toFixed(1) : "",
+            "Підстава": item.reason
+          }));
+
+          const actionSheet = XLSX.utils.json_to_sheet(actionRows);
+          XLSX.utils.book_append_sheet(workbook, actionSheet, "Журнал дій");
+        }
+      }
+
       if (typeof getExchangeImpactSummary === "function") {
         const impact = getExchangeImpactSummary(exchangeRecommendations);
         const impactRows = [

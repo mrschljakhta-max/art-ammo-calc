@@ -131,6 +131,44 @@
         }
       );
 
+      if (typeof getExchangeActionPlan === "function") {
+        const actionPlan = getExchangeActionPlan(exchangeRecommendations);
+
+        if (actionPlan.length) {
+          content.push(
+            { text: "Журнал рекомендованих дій", style: "section" },
+            {
+              table: {
+                headerRows: 1,
+                widths: ["auto", "auto", "*", "*", "*", "*", "*"],
+                body: [
+                  [
+                    { text: "№", bold: true },
+                    { text: "Пріоритет", bold: true },
+                    { text: "Дія", bold: true },
+                    { text: "Звідки", bold: true },
+                    { text: "Куди", bold: true },
+                    { text: "Буде", bold: true },
+                    { text: "Ризик", bold: true }
+                  ],
+                  ...actionPlan.map(item => [
+                    String(item.order),
+                    item.priority,
+                    item.action,
+                    item.fromUnit,
+                    item.toUnit,
+                    item.after,
+                    item.risk
+                  ])
+                ]
+              },
+              layout: "lightHorizontalLines",
+              margin: [0, 0, 0, 18]
+            }
+          );
+        }
+      }
+
       if (typeof getExchangeImpactSummary === "function") {
         const impact = getExchangeImpactSummary(exchangeRecommendations);
         content.push(

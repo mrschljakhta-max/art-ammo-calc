@@ -1203,6 +1203,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderExchangeRecommendations(getExchangeRecommendations(window.ArtAmmoState?.unitItems || unitItems, getLowBalanceThreshold(), 12))}
     ${renderExchangeImpact(getExchangeRecommendations(window.ArtAmmoState?.unitItems || unitItems, getLowBalanceThreshold(), 12))}
+    ${renderExchangeActionPlan(getExchangeActionPlan(getExchangeRecommendations(window.ArtAmmoState?.unitItems || unitItems, getLowBalanceThreshold(), 12)))}
     ${renderRecommendations(recommendations)}
     ${renderCommanderSummary(commanderSummary)}
   `;
@@ -1645,6 +1646,94 @@ function renderExchangeImpact(recommendations) {
 
       <div class="exchange-impact-note">
         Поріг малого залишку: ≤${impact.threshold}. Розрахунок є попереднім і не враховує фізичну доступність, час переміщення та рішення відповідальних осіб.
+      </div>
+    </div>
+  `;
+}
+
+
+function getExchangeActionPlan(recommendations) {
+  const recs = Array.isArray(recommendations) ? recommendations : [];
+
+  return recs.map((item, index) => {
+    const donorAfter = Number(item.donorBalance || 0) - Number(item.recommendedQty || 0);
+    const receiverAfter = Number(item.expectedReceiverBalance || 0);
+    const threshold = getLowBalanceThreshold();
+
+    let priority = "III";
+    let risk = "Планово";
+
+    if (item.longRange && Number(item.receiverBalance || 0) === 0) {
+      priority = "I";
+      risk = "Критично";
+    } else if (item.longRange || Number(item.receiverBalance || 0) === 0) {
+      priority = "II";
+      risk = "Високий";
+    }
+
+    if (donorAfter <= threshold) {
+      risk += " / контроль донора";
+    }
+
+    return {
+      order: index + 1,
+      priority,
+      risk,
+      action: `Передати ${item.recommendedQty} од. ${item.projectile} (${item.charge})`,
+      fromUnit: item.fromUnit,
+      toUnit: item.toUnit,
+      before: `${item.toUnit}: ${item.receiverBalance}; ${item.fromUnit}: ${item.donorBalance}`,
+      after: `${item.toUnit}: ${receiverAfter}; ${item.fromUnit}: ${donorAfter}`,
+      longRange: item.longRange,
+      rangeKm: item.rangeKm,
+      reason: item.reason
+    };
+  });
+}
+
+function renderExchangeActionPlan(plan) {
+  if (!plan || !plan.length) return "";
+
+  return `
+    <div class="action-plan-panel">
+      <div class="action-plan-header">
+        <h2>Журнал рекомендованих дій</h2>
+        <span>Практичний список кроків за результатами обміну</span>
+      </div>
+
+      <div class="table-wrap compact-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>№</th>
+              <th>Пріоритет</th>
+              <th>Дія</th>
+              <th>Звідки</th>
+              <th>Куди</th>
+              <th>Було</th>
+              <th>Буде</th>
+              <th>Ризик</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${plan.map(item => `
+              <tr class="${item.priority === "I" ? "row-zero" : item.priority === "II" ? "row-low" : "row-normal"}">
+                <td>${item.order}</td>
+                <td><span class="action-priority action-priority-${item.priority}">${item.priority}</span></td>
+                <td>${escapeHtml(item.action)}${item.longRange ? ` <span class="status-badge status-long">Далекобійна</span>` : ""}</td>
+                <td>${escapeHtml(item.fromUnit)}</td>
+                <td>${escapeHtml(item.toUnit)}</td>
+                <td>${escapeHtml(item.before)}</td>
+                <td>${escapeHtml(item.after)}</td>
+                <td>${escapeHtml(item.risk)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="action-plan-note">
+        Це попередній журнал дій для планування. Перед виконанням потрібно підтвердити фізичну наявність, доступність транспорту, час переміщення та рішення відповідальних осіб.
       </div>
     </div>
   `;
