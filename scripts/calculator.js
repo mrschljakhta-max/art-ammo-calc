@@ -197,6 +197,59 @@ function groupByUnit(items) {
   return grouped;
 }
 
+function enrichUnitStats(grouped, threshold = 10) {
+  return Object.values(grouped).map(unit => {
+    const zeroCount = unit.items.filter(item => Number(item.balance || 0) === 0).length;
+    const lowCount = unit.items.filter(item => {
+      const balance = Number(item.balance || 0);
+      return balance > 0 && balance <= threshold;
+    }).length;
+    const longRangeShare = unit.totalBalance > 0
+      ? Math.round((unit.longRangeBalance / unit.totalBalance) * 100)
+      : 0;
+
+    return {
+      ...unit,
+      zeroCount,
+      lowCount,
+      riskCount: zeroCount + lowCount,
+      longRangeShare
+    };
+  });
+}
+
+function getUnitRanking(grouped, mode, limit = 6) {
+  const threshold = getLowBalanceThreshold();
+  const stats = enrichUnitStats(grouped, threshold);
+
+  const sorters = {
+    balance: (a, b) => Number(b.totalBalance || 0) - Number(a.totalBalance || 0),
+    longRange: (a, b) => Number(b.longRangeBalance || 0) - Number(a.longRangeBalance || 0),
+    risk: (a, b) => Number(b.riskCount || 0) - Number(a.riskCount || 0) || Number(a.totalBalance || 0) - Number(b.totalBalance || 0)
+  };
+
+  return stats
+    .sort((a, b) => (sorters[mode] || sorters.balance)(a, b) || String(a.unit).localeCompare(String(b.unit), "uk"))
+    .slice(0, limit);
+}
+
+function renderUnitRankList(units, valueKey, suffix = "") {
+  if (!units.length) {
+    return `<div class="insight-empty">Даних по підрозділах не знайдено</div>`;
+  }
+
+  return units.map((unit, index) => `
+    <div class="unit-rank-row">
+      <div class="rank-index">${index + 1}</div>
+      <div class="rank-main">
+        <strong>${escapeHtml(unit.unit)}</strong>
+        <span>${unit.combinations.size} комбінацій · ${unit.longRangeShare}% далекобійних</span>
+      </div>
+      <div class="rank-value">${unit[valueKey]}${suffix}</div>
+    </div>
+  `).join("");
+}
+
 function groupByCategory(items) {
   const grouped = {};
 
@@ -555,6 +608,9 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const topBalanceItems = getTopBalanceItems(unitItems, 5);
   const topLongRangeItems = getTopLongRangeItems(unitItems, 5);
   const topRiskItems = getTopRiskItems(unitItems, lowThreshold, 5);
+  const topUnitsByBalance = getUnitRanking(grouped, "balance", 6);
+  const topUnitsByLongRange = getUnitRanking(grouped, "longRange", 6);
+  const topUnitsByRisk = getUnitRanking(grouped, "risk", 6);
 
   let html = `
     <div class="analysis-grid">
@@ -602,6 +658,23 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
       <div class="insight-card">
         <div class="insight-title">Критичний ризик</div>
         ${renderInsightList(topRiskItems, "Критичних позицій не знайдено")}
+      </div>
+    </div>
+
+    <div class="unit-rank-grid">
+      <div class="unit-rank-card">
+        <div class="insight-title">Рейтинг підрозділів за залишком</div>
+        ${renderUnitRankList(topUnitsByBalance, "totalBalance")}
+      </div>
+
+      <div class="unit-rank-card">
+        <div class="insight-title">Рейтинг за далекобійними</div>
+        ${renderUnitRankList(topUnitsByLongRange, "longRangeBalance")}
+      </div>
+
+      <div class="unit-rank-card">
+        <div class="insight-title">Рейтинг ризику</div>
+        ${renderUnitRankList(topUnitsByRisk, "riskCount", " поз.")}
       </div>
     </div>
   `;
