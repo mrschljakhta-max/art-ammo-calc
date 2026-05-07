@@ -16,13 +16,16 @@ const actionLongOnly = document.getElementById("actionLongOnly");
 const actionStatusFilter = document.getElementById("actionStatusFilter");
 const exportDecisionPackageBtn = document.getElementById("exportDecisionPackageBtn");
 const importDecisionPackageFile = document.getElementById("importDecisionPackageFile");
+const exportAliasDictionaryBtn = document.getElementById("exportAliasDictionaryBtn");
+const importAliasDictionaryFile = document.getElementById("importAliasDictionaryFile");
+const resetAliasDictionaryBtn = document.getElementById("resetAliasDictionaryBtn");
 const appVersion = document.getElementById("appVersion");
 
 function getAppMeta() {
   return window.ART_AMMO_APP_META || {
     appName: "Art Ammo",
-    version: "0.27",
-    buildLabel: "v27-alias-watchlist",
+    version: "0.28",
+    buildLabel: "v28-alias-dictionary",
     buildDate: "2026-05-07",
     logicProfile: "Excel локально + аналітика залишків + журнал дій"
   };
@@ -52,6 +55,9 @@ if (actionLongOnly) actionLongOnly.addEventListener("change", applyFilters);
 if (actionStatusFilter) actionStatusFilter.addEventListener("change", applyFilters);
 if (exportDecisionPackageBtn) exportDecisionPackageBtn.addEventListener("click", exportDecisionPackage);
 if (importDecisionPackageFile) importDecisionPackageFile.addEventListener("change", importDecisionPackageFromFile);
+if (exportAliasDictionaryBtn) exportAliasDictionaryBtn.addEventListener("click", exportAliasDictionaryToJson);
+if (importAliasDictionaryFile) importAliasDictionaryFile.addEventListener("change", importAliasDictionaryFromJson);
+if (resetAliasDictionaryBtn) resetAliasDictionaryBtn.addEventListener("click", resetAliasDictionary);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -89,6 +95,8 @@ function analyzeWorkbook() {
   document.getElementById("exportPdfBtn").disabled = false;
   if (exportStatusesBtn) exportStatusesBtn.disabled = false;
   if (exportDecisionPackageBtn) exportDecisionPackageBtn.disabled = false;
+  if (exportAliasDictionaryBtn) exportAliasDictionaryBtn.disabled = false;
+  if (resetAliasDictionaryBtn) resetAliasDictionaryBtn.disabled = false;
 
   if (typeof setStatus === "function") {
     setStatus(`Проаналізовано: ${unitItems.length} рядків`, "ok");
@@ -159,14 +167,19 @@ function parseAmmoName(text) {
 
   if (!match) return null;
 
-  const projectile = normalizeName(match[1]);
-  const charge = normalizeName(match[2]);
+  const normalizedProjectile = normalizeName(match[1]);
+  const normalizedCharge = normalizeName(match[2]);
+
+  const projectile = applyAliasDictionaryOverride("projectiles", normalizedProjectile);
+  const charge = applyAliasDictionaryOverride("charges", normalizedCharge);
 
   return {
     projectile,
     charge,
     projectileKey: getCanonicalKey(projectile),
     chargeKey: getCanonicalKey(charge),
+    rawProjectileKey: getCanonicalKey(normalizedProjectile),
+    rawChargeKey: getCanonicalKey(normalizedCharge),
     note: cleanCell(match[3])
   };
 }
@@ -1513,6 +1526,230 @@ function parseAmmoNameRaw(text) {
 }
 
 
+function getAliasDictionary() {
+  const empty = { projectiles: {}, charges: {}, updatedAt: null };
+
+  try {
+    const parsed = JSON.parse(localStorage.getItem("artAmmoAliasDictionary") || "null");
+    if (!parsed || typeof parsed !== "object") return empty;
+
+    return {
+      projectiles: parsed.projectiles && typeof parsed.projectiles === "object" ? parsed.projectiles : {},
+      charges: parsed.charges && typeof parsed.charges === "object" ? parsed.charges : {},
+      updatedAt: parsed.updatedAt || null
+    };
+  } catch (error) {
+    return empty;
+  }
+}
+
+function saveAliasDictionary(dictionary) {
+  const payload = {
+    projectiles: dictionary?.projectiles || {},
+    charges: dictionary?.charges || {},
+    updatedAt: new Date().toISOString()
+  };
+
+  localStorage.setItem("artAmmoAliasDictionary", JSON.stringify(payload));
+  window.ArtAmmoState.aliasDictionary = payload;
+  return payload;
+}
+
+function getAliasDictionaryEntry(type, key) {
+  const dictionary = window.ArtAmmoState?.aliasDictionary || getAliasDictionary();
+  const bucket = dictionary[type] || {};
+  return bucket[key] || null;
+}
+
+function applyAliasDictionaryOverride(type, normalizedName) {
+  const key = getCanonicalKey(normalizedName);
+  const entry = getAliasDictionaryEntry(type, key);
+  return cleanCell(entry?.canonicalName || normalizedName);
+}
+
+function buildAliasDictionaryDraft(items) {
+  const watchlist = buildAliasWatchlist(items || []);
+  const dictionary = getAliasDictionary();
+
+  function fill(type, groups) {
+    if (!dictionary[type]) dictionary[type] = {};
+
+    groups.forEach(group => {
+      if (!dictionary[type][group.key]) {
+        dictionary[type][group.key] = {
+          canonicalName: group.normalizedName,
+          aliases: group.aliases.map(alias => alias.raw),
+          source: "auto-watchlist",
+          rows: group.rows,
+          totalBalance: group.totalBalance,
+          updatedAt: new Date().toISOString()
+        };
+      }
+    });
+  }
+
+  fill("projectiles", watchlist.projectiles);
+  fill("charges", watchlist.charges);
+
+  return dictionary;
+}
+
+function getAliasDictionaryStats(dictionary = getAliasDictionary()) {
+  const projectiles = Object.values(dictionary.projectiles || {});
+  const charges = Object.values(dictionary.charges || {});
+
+  return {
+    projectilesCount: projectiles.length,
+    chargesCount: charges.length,
+    aliasesCount: [...projectiles, ...charges].reduce((sum, entry) => sum + (entry.aliases || []).length, 0),
+    updatedAt: dictionary.updatedAt || null
+  };
+}
+
+function exportAliasDictionaryToJson() {
+  const baseItems = window.ArtAmmoState?.unitItems || [];
+  const dictionary = buildAliasDictionaryDraft(baseItems);
+  const saved = saveAliasDictionary(dictionary);
+  const meta = getAppMeta();
+
+  const payload = {
+    app: meta.appName || "Art Ammo",
+    type: "alias-dictionary",
+    dictionaryVersion: 1,
+    appVersion: meta.version,
+    buildLabel: meta.buildLabel,
+    exportedAt: new Date().toISOString(),
+    dictionary: saved
+  };
+
+  downloadJson(payload, `art_ammo_alias_dictionary_${new Date().toISOString().slice(0, 10)}.json`);
+
+  if (typeof analyzeWorkbook === "function" && window.ArtAmmoState?.workbook) {
+    analyzeWorkbook();
+  }
+}
+
+function importAliasDictionaryFromJson(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    try {
+      const payload = JSON.parse(e.target.result);
+      const incoming = payload.dictionary || payload;
+
+      if (!incoming || typeof incoming !== "object") {
+        alert("Файл не схожий на словник відповідностей.");
+        return;
+      }
+
+      const current = getAliasDictionary();
+      const merged = {
+        projectiles: { ...current.projectiles, ...(incoming.projectiles || {}) },
+        charges: { ...current.charges, ...(incoming.charges || {}) },
+        updatedAt: new Date().toISOString()
+      };
+
+      saveAliasDictionary(merged);
+      alert("Словник відповідностей імпортовано. Аналіз буде оновлено.");
+
+      if (window.ArtAmmoState?.workbook) analyzeWorkbook();
+    } catch (error) {
+      console.error(error);
+      alert("Не вдалося імпортувати словник. Перевір JSON-файл.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+function resetAliasDictionary() {
+  if (!confirm("Очистити локальний словник відповідностей назв?")) return;
+
+  localStorage.removeItem("artAmmoAliasDictionary");
+  window.ArtAmmoState.aliasDictionary = getAliasDictionary();
+
+  if (window.ArtAmmoState?.workbook) analyzeWorkbook();
+}
+
+function renderAliasDictionaryPanel() {
+  const dictionary = getAliasDictionary();
+  const stats = getAliasDictionaryStats(dictionary);
+  const updatedText = stats.updatedAt ? new Date(stats.updatedAt).toLocaleString("uk-UA") : "ще не збережено";
+
+  const renderRows = (type, label) => {
+    const entries = Object.entries(dictionary[type] || {});
+
+    if (!entries.length) {
+      return `<tr><td colspan="5" class="muted-cell">Записів поки немає. Натисни “Експорт словника”, щоб сформувати чернетку з підозрілих назв.</td></tr>`;
+    }
+
+    return entries.slice(0, 50).map(([key, entry]) => `
+      <tr>
+        <td>${label}</td>
+        <td><b>${escapeHtml(entry.canonicalName || key)}</b><div class="alias-key">${escapeHtml(key)}</div></td>
+        <td>${(entry.aliases || []).length}</td>
+        <td>${escapeHtml(entry.source || "manual/import")}</td>
+        <td>${(entry.aliases || []).map(alias => `<span class="alias-chip">${escapeHtml(alias)}</span>`).join("")}</td>
+      </tr>
+    `).join("");
+  };
+
+  return `
+    <div class="table-panel analysis-table alias-dictionary-panel">
+      <div class="alias-watchlist-header">
+        <div>
+          <h2>Словник відповідностей назв</h2>
+          <p>Локальний керований словник. Він зберігається в браузері, може експортуватися в JSON і переноситися між комп’ютерами.</p>
+        </div>
+        <div class="alias-count-pill">${stats.projectilesCount + stats.chargesCount} записів</div>
+      </div>
+
+      <div class="dictionary-control-grid">
+        <div class="dictionary-control-card">
+          <span>Снаряди</span>
+          <b>${stats.projectilesCount}</b>
+        </div>
+        <div class="dictionary-control-card">
+          <span>Заряди</span>
+          <b>${stats.chargesCount}</b>
+        </div>
+        <div class="dictionary-control-card">
+          <span>Аліаси</span>
+          <b>${stats.aliasesCount}</b>
+        </div>
+        <div class="dictionary-control-card wide">
+          <span>Оновлено</span>
+          <b>${escapeHtml(updatedText)}</b>
+        </div>
+      </div>
+
+      <div class="table-wrap compact-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Тип</th>
+              <th>Канонічна назва / ключ</th>
+              <th>Аліасів</th>
+              <th>Джерело</th>
+              <th>Варіанти</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderRows("projectiles", "Снаряд")}
+            ${renderRows("charges", "Заряд")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+
 function buildAliasWatchlist(items) {
   const groups = {
     projectiles: new Map(),
@@ -1973,6 +2210,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     ${renderDataQualityPanel(dataQuality)}
     ${renderNormalizerPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderAliasWatchlistPanel(window.ArtAmmoState?.unitItems || unitItems)}
+    ${renderAliasDictionaryPanel()}
     ${renderAutoDictionariesPanel(autoDictionaries)}
     ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderExchangeRecommendations(exchangeRecommendations)}
@@ -2719,6 +2957,7 @@ function buildDecisionPackagePayload() {
     actionPlan,
     actionStatusIntegrity: actionIntegrity,
     dataQuality,
+    aliasDictionary: getAliasDictionary(),
     actionStatuses: getAllActionStatuses(),
     filteredRows: items.map(item => ({
       unit: item.unit,
@@ -3022,3 +3261,7 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+window.exportAliasDictionaryToJson = exportAliasDictionaryToJson;
+window.importAliasDictionaryFromJson = importAliasDictionaryFromJson;
+window.resetAliasDictionary = resetAliasDictionary;
