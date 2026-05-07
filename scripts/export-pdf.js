@@ -21,8 +21,8 @@
       ? getCriticalItems(items)
       : items.filter(item => Number(item.balance || 0) === 0);
     const lowBalanceItems = typeof getLowBalanceItems === "function"
-      ? getLowBalanceItems(items, 10)
-      : items.filter(item => Number(item.balance || 0) > 0 && Number(item.balance || 0) <= 10);
+      ? getLowBalanceItems(items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10)
+      : items.filter(item => Number(item.balance || 0) > 0 && Number(item.balance || 0) <= (typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10));
 
     const totalBalance = items.reduce((sum, item) => sum + Number(item.balance || 0), 0);
     const totalReceived = items.reduce((sum, item) => sum + Number(item.received || 0), 0);

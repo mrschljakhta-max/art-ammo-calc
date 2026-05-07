@@ -6,12 +6,14 @@ const longRangeOnly = document.getElementById("longRangeOnly");
 const searchFilter = document.getElementById("searchFilter");
 const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 const filterStatus = document.getElementById("filterStatus");
+const lowBalanceThreshold = document.getElementById("lowBalanceThreshold");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
 longRangeOnly.addEventListener("change", applyFilters);
 searchFilter.addEventListener("input", applyFilters);
 resetFiltersBtn.addEventListener("click", resetFilters);
+lowBalanceThreshold.addEventListener("input", applyFilters);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -348,7 +350,18 @@ function resetFilters() {
   unitFilter.value = "all";
   longRangeOnly.checked = false;
   searchFilter.value = "";
+  lowBalanceThreshold.value = "10";
   applyFilters();
+}
+
+function getLowBalanceThreshold() {
+  const value = Number(lowBalanceThreshold?.value || 10);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    return 10;
+  }
+
+  return Math.floor(value);
 }
 
 function updateFilterStatus(items) {
@@ -358,6 +371,7 @@ function updateFilterStatus(items) {
   if (unitFilter.value !== "all") active.push(`підрозділ: ${unitFilter.value}`);
   if (longRangeOnly.checked) active.push("тільки далекобійні");
   if (searchFilter.value.trim()) active.push(`пошук: ${searchFilter.value.trim()}`);
+  active.push(`малий залишок ≤${getLowBalanceThreshold()}`);
 
   filterStatus.hidden = false;
   filterStatus.textContent = active.length
@@ -387,7 +401,8 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const groupedByCategory = groupByCategory(unitItems);
   const groupedByRangeBand = groupByRangeBand(unitItems);
   const criticalItems = getCriticalItems(unitItems);
-  const lowBalanceItems = getLowBalanceItems(unitItems, 10);
+  const lowThreshold = getLowBalanceThreshold();
+  const lowBalanceItems = getLowBalanceItems(unitItems, lowThreshold);
 
   let html = `
     <div class="analysis-grid">
@@ -416,7 +431,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
         <div class="metric-value">${criticalItems.length}</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Малий залишок ≤10</div>
+        <div class="metric-label">Малий залишок ≤${lowThreshold}</div>
         <div class="metric-value">${lowBalanceItems.length}</div>
       </div>
     </div>
