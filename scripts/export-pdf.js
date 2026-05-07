@@ -37,7 +37,7 @@
     const fileDate = now.toISOString().slice(0, 10);
 
     const content = [
-      { text: "ART AMMO — звіт аналізу залишків", style: "header" },
+      { text: "BASTION — звіт аналізу залишків", style: "header" },
       { text: `Дата формування: ${dateText}`, margin: [0, 0, 0, 12] },
       {
         columns: [
@@ -295,6 +295,8 @@
       }
     };
 
-    pdfMake.createPdf(docDefinition).download(`art_ammo_report_${fileDate}.pdf`);
+    const settings = window.BastionSettings || {};
+    const prefix = String(settings.exportPrefix || "bastion").trim() || "bastion";
+    pdfMake.createPdf(docDefinition).download(`${prefix}_report_${fileDate}.pdf`);
   }
 })();

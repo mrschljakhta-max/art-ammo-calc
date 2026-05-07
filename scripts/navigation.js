@@ -15,14 +15,28 @@
   tick();
   setInterval(tick, 1000);
 
-  function activateView(view) {
+  function activateView(view, options = {}) {
+    const targetView = view || "dashboard";
+
     document.querySelectorAll("[data-view]").forEach((button) => {
-      button.classList.toggle("is-active", button.dataset.view === view);
+      button.classList.toggle("is-active", button.dataset.view === targetView);
     });
 
     document.querySelectorAll("[data-view-panel]").forEach((panel) => {
-      panel.classList.toggle("is-active", panel.dataset.viewPanel === view);
+      panel.classList.toggle("is-active", panel.dataset.viewPanel === targetView);
     });
+
+    document.body.dataset.activeView = targetView;
+
+    if (!options.silentHash) {
+      try {
+        history.replaceState(null, "", `#${targetView}`);
+      } catch (error) {}
+    }
+
+    updateDashboardMetrics();
+    updateImportCenter();
+    updateHistoryCenter();
   }
 
   document.querySelectorAll("[data-view]").forEach((button) => {
@@ -38,7 +52,8 @@
       fileState.textContent = name;
       setText("dashFileState", name);
 
-      if (file) activateView("analytics");
+      const settings = window.BastionSettings || readBastionSettings();
+      if (file && settings.autoOpenAnalytics) activateView("analytics");
     });
   }
 
@@ -57,8 +72,13 @@
   }
 
   function getLowThreshold() {
-    const thresholdInput = document.getElementById("lowStockThreshold");
-    const parsed = Number(thresholdInput?.value || 10);
+    const settings = window.BastionSettings || readBastionSettings?.() || {};
+    const thresholdInput =
+      document.getElementById("lowBalanceThreshold") ||
+      document.getElementById("lowStockThreshold") ||
+      document.getElementById("settingsLowStockThreshold");
+
+    const parsed = Number(thresholdInput?.value ?? settings.lowStockThreshold ?? 10);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 10;
   }
 
@@ -76,7 +96,7 @@
     const longRangeOnly = document.getElementById("longRangeOnly");
     const searchFilter = document.getElementById("searchFilter");
     const stockFilter = document.getElementById("stockFilter");
-    const sortMode = document.getElementById("sortMode");
+    const sortMode = document.getElementById("sortMode") || document.getElementById("sortFilter");
 
     if (unitFilter && unitFilter.value && unitFilter.value !== "all") parts.push(`підрозділ: ${unitFilter.value}`);
     if (longRangeOnly?.checked) parts.push("далекобійні");
@@ -107,7 +127,7 @@
 
     return {
       app: "BASTION",
-      version: "v0.41",
+      version: window.BASTION_SYSTEM?.version || "v0.44",
       generatedAt: now.toISOString(),
       sourceFileName: state.sourceFileName || "unknown",
       filters: getReportFilterLabel(),
@@ -338,7 +358,7 @@
     return {
       id: `snapshot_${Date.now()}`,
       app: "BASTION",
-      version: "v0.41",
+      version: window.BASTION_SYSTEM?.version || "v0.44",
       createdAt: new Date().toISOString(),
       sourceFileName: state.sourceFileName || document.getElementById("dashFileState")?.textContent || "unknown",
       rows: items.length,
@@ -378,7 +398,7 @@
 
     const payload = {
       app: "BASTION",
-      version: "v0.41",
+      version: window.BASTION_SYSTEM?.version || "v0.44",
       exportedAt: new Date().toISOString(),
       snapshots
     };
@@ -739,11 +759,22 @@
   function applyBastionSettings(settings = readBastionSettings()) {
     window.BastionSettings = settings;
 
-    const lowStockInput = document.getElementById("lowStockThreshold");
-    if (lowStockInput) lowStockInput.value = settings.lowStockThreshold;
+    const lowStockInputs = [
+      document.getElementById("settingsLowStockThreshold"),
+      document.getElementById("lowBalanceThreshold"),
+      document.getElementById("lowStockThreshold")
+    ].filter(Boolean);
+
+    lowStockInputs.forEach(input => {
+      input.value = settings.lowStockThreshold;
+    });
 
     if (window.ART_AMMO_SCHEMA && Number.isFinite(Number(settings.longRangeKm))) {
       window.ART_AMMO_SCHEMA.LONG_RANGE_KM = Number(settings.longRangeKm);
+    }
+
+    if (!document.body.dataset.activeView && settings.defaultView) {
+      activateView(settings.defaultView, { silentHash: true });
     }
 
     setText("settingsLogicProfileState", settings.logicProfile);
@@ -821,7 +852,7 @@
     const settings = readBastionSettings();
     const payload = {
       app: "BASTION",
-      version: "v0.41",
+      version: window.BASTION_SYSTEM?.version || "v0.44",
       exportedAt: new Date().toISOString(),
       settings
     };
@@ -870,9 +901,24 @@
     observer.observe(analysisPanel, { childList: true, subtree: true });
   }
 
+  window.BastionNavigation = {
+    activateView,
+    updateDashboardMetrics,
+    updateImportCenter,
+    updateHistoryCenter,
+    readBastionSettings,
+    applyBastionSettings
+  };
+
   bindSettingsCenter();
   bindReportsCenter();
   bindHistoryCenter();
+
+  const startViewFromHash = String(location.hash || "").replace("#", "").trim();
+  const startSettings = readBastionSettings();
+  const startView = startViewFromHash || startSettings.defaultView || "dashboard";
+  activateView(startView, { silentHash: Boolean(startViewFromHash) });
+
   updateHistoryCenter();
   setInterval(updateDashboardMetrics, 1500);
   updateDashboardMetrics();

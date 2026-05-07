@@ -38,13 +38,24 @@ function handleExcel(event) {
       window.ArtAmmoState.workbook = currentWorkbook;
       window.ArtAmmoState.loadedAt = new Date().toISOString();
 
-      document.getElementById("analyzeBtn").disabled = false;
+      const analyzeButton = document.getElementById("analyzeBtn");
+      if (analyzeButton) analyzeButton.disabled = false;
       setStatus("Файл завантажено", "ok");
 
       renderSheets(currentWorkbook);
 
-      if (typeof analyzeWorkbook === "function") {
+      const settings = window.BastionSettings || {};
+      const shouldAnalyze = settings.autoAnalyze !== false;
+      const shouldOpenAnalytics = settings.autoOpenAnalytics !== false;
+
+      if (shouldOpenAnalytics && window.BastionNavigation?.activateView) {
+        window.BastionNavigation.activateView("analytics");
+      }
+
+      if (shouldAnalyze && typeof analyzeWorkbook === "function") {
         analyzeWorkbook();
+      } else {
+        setStatus("Файл завантажено. Автоаналіз вимкнено.", "ok");
       }
     } catch (error) {
       console.error(error);
@@ -74,9 +85,12 @@ function resetWorkbookState(fileName) {
     filterStatus.textContent = "";
   }
 
-  document.getElementById("analyzeBtn").disabled = true;
-  document.getElementById("exportExcelBtn").disabled = true;
-  document.getElementById("exportPdfBtn").disabled = true;
+  const analyzeBtnNode = document.getElementById("analyzeBtn");
+  if (analyzeBtnNode) analyzeBtnNode.disabled = true;
+  const exportExcelBtnNode = document.getElementById("exportExcelBtn");
+  if (exportExcelBtnNode) exportExcelBtnNode.disabled = true;
+  const exportPdfBtnNode = document.getElementById("exportPdfBtn");
+  if (exportPdfBtnNode) exportPdfBtnNode.disabled = true;
 
   const filtersPanel = document.getElementById("filtersPanel");
   if (filtersPanel) filtersPanel.hidden = true;

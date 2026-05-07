@@ -170,6 +170,8 @@
     const now = new Date();
     const fileDate = now.toISOString().slice(0, 10);
 
-    XLSX.writeFile(workbook, `art_ammo_export_${fileDate}.xlsx`);
+    const settings = window.BastionSettings || {};
+    const prefix = String(settings.exportPrefix || "bastion").trim() || "bastion";
+    XLSX.writeFile(workbook, `${prefix}_export_${fileDate}.xlsx`);
   }
 })();
