@@ -1,52 +1,37 @@
-const exportExcelBtn = document.getElementById("exportExcelBtn");
+(function () {
+  const btn = document.getElementById("exportExcelBtn");
 
-exportExcelBtn.addEventListener("click", exportAnalysisToExcel);
+  if (!btn) return;
 
-function exportAnalysisToExcel() {
-  const items = typeof getCurrentFilteredItems === "function"
-    ? getCurrentFilteredItems()
-    : (window.ArtAmmoState?.unitItems || []);
+  btn.addEventListener("click", exportAnalysisToExcel);
 
-  if (!items.length) {
-    alert("Немає даних для експорту. Спочатку натисни «Аналізувати файл».");
-    return;
-  }
+  function exportAnalysisToExcel() {
+    const items = typeof getCurrentFilteredItems === "function"
+      ? getCurrentFilteredItems()
+      : (window.ArtAmmoState?.unitItems || []);
 
-  const grouped = groupByUnit(items);
-  const workbook = XLSX.utils.book_new();
+    if (!items.length) {
+      alert("Немає даних для експорту. Спочатку натисни «Аналізувати файл».");
+      return;
+    }
 
-  const summaryRows = Object.values(grouped).map(unit => ({
-    "Підрозділ": unit.unit,
-    "Комбінацій": unit.combinations.size,
-    "Отримання": unit.totalReceived,
-    "Витрата": unit.totalSpent,
-    "Залишок": unit.totalBalance,
-    "Далекобійних": unit.longRangeBalance
-  }));
+    const grouped = groupByUnit(items);
+    const workbook = XLSX.utils.book_new();
 
-  const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
-  XLSX.utils.book_append_sheet(workbook, summarySheet, "Підсумок");
+    const summaryRows = Object.values(grouped).map(unit => ({
+      "Підрозділ": unit.unit,
+      "Комбінацій": unit.combinations.size,
+      "Отримання": unit.totalReceived,
+      "Витрата": unit.totalSpent,
+      "Залишок": unit.totalBalance,
+      "Далекобійних": unit.longRangeBalance
+    }));
 
-  const detailRows = items.map(item => ({
-    "Підрозділ": item.unit,
-    "Рядок": item.row,
-    "Категорія": item.category,
-    "Снаряд": item.projectile,
-    "Заряд": item.charge,
-    "Примітка": item.note,
-    "Дальність, м": item.rangeMeters || "",
-    "Дальність, км": item.rangeKm ? item.rangeKm.toFixed(1) : "",
-    "Далекобійна": item.longRange ? "Так" : "Ні",
-    "Отримання": item.received,
-    "Витрата": item.spent,
-    "Залишок": item.balance
-  }));
+    const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "Підсумок");
 
-  const detailSheet = XLSX.utils.json_to_sheet(detailRows);
-  XLSX.utils.book_append_sheet(workbook, detailSheet, "Детально");
-
-  Object.values(grouped).forEach(unit => {
-    const unitRows = unit.items.map(item => ({
+    const detailRows = items.map(item => ({
+      "Підрозділ": item.unit,
       "Рядок": item.row,
       "Категорія": item.category,
       "Снаряд": item.projectile,
@@ -60,16 +45,35 @@ function exportAnalysisToExcel() {
       "Залишок": item.balance
     }));
 
-    const safeSheetName = unit.unit
-      .replace(/[\\/?*\[\]:]/g, "")
-      .slice(0, 31);
+    const detailSheet = XLSX.utils.json_to_sheet(detailRows);
+    XLSX.utils.book_append_sheet(workbook, detailSheet, "Детально");
 
-    const unitSheet = XLSX.utils.json_to_sheet(unitRows);
-    XLSX.utils.book_append_sheet(workbook, unitSheet, safeSheetName);
-  });
+    Object.values(grouped).forEach(unit => {
+      const unitRows = unit.items.map(item => ({
+        "Рядок": item.row,
+        "Категорія": item.category,
+        "Снаряд": item.projectile,
+        "Заряд": item.charge,
+        "Примітка": item.note,
+        "Дальність, м": item.rangeMeters || "",
+        "Дальність, км": item.rangeKm ? item.rangeKm.toFixed(1) : "",
+        "Далекобійна": item.longRange ? "Так" : "Ні",
+        "Отримання": item.received,
+        "Витрата": item.spent,
+        "Залишок": item.balance
+      }));
 
-  const now = new Date();
-  const fileDate = now.toISOString().slice(0, 10);
+      const safeSheetName = unit.unit
+        .replace(/[\\/?*\[\]:]/g, "")
+        .slice(0, 31);
 
-  XLSX.writeFile(workbook, `art_ammo_export_${fileDate}.xlsx`);
-}
+      const unitSheet = XLSX.utils.json_to_sheet(unitRows);
+      XLSX.utils.book_append_sheet(workbook, unitSheet, safeSheetName || "Підрозділ");
+    });
+
+    const now = new Date();
+    const fileDate = now.toISOString().slice(0, 10);
+
+    XLSX.writeFile(workbook, `art_ammo_export_${fileDate}.xlsx`);
+  }
+})();
