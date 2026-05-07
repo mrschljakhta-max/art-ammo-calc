@@ -669,3 +669,78 @@ tr.row-long:hover td {
     flex-direction: column;
   }
 }
+
+/* v12: паспорт звіту */
+.report-passport-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  box-shadow: 0 0 28px rgba(0,0,0,0.2);
+}
+
+.report-passport-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.report-passport-header h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.report-passport-header span {
+  color: rgba(255,255,255,0.62);
+  font-size: 13px;
+}
+
+.report-passport-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.report-passport-item {
+  padding: 12px 13px;
+  border-radius: 15px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.report-passport-label {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(147, 197, 253, 0.95);
+  margin-bottom: 6px;
+}
+
+.report-passport-value {
+  color: rgba(255,255,255,0.84);
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+@media (max-width: 1100px) {
+  .report-passport-grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .report-passport-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-passport-header {
+    flex-direction: column;
+  }
+}
