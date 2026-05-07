@@ -7,6 +7,7 @@ const searchFilter = document.getElementById("searchFilter");
 const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 const filterStatus = document.getElementById("filterStatus");
 const lowBalanceThreshold = document.getElementById("lowBalanceThreshold");
+const stockFilter = document.getElementById("stockFilter");
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
@@ -14,6 +15,7 @@ longRangeOnly.addEventListener("change", applyFilters);
 searchFilter.addEventListener("input", applyFilters);
 resetFiltersBtn.addEventListener("click", resetFilters);
 lowBalanceThreshold.addEventListener("input", applyFilters);
+stockFilter.addEventListener("change", applyFilters);
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -343,6 +345,25 @@ function getCurrentFilteredItems() {
     );
   }
 
+  const threshold = getLowBalanceThreshold();
+
+  if (stockFilter.value === "problem") {
+    filtered = filtered.filter(item =>
+      Number(item.balance || 0) === 0 ||
+      (Number(item.balance || 0) > 0 && Number(item.balance || 0) <= threshold)
+    );
+  }
+
+  if (stockFilter.value === "zero") {
+    filtered = filtered.filter(item => Number(item.balance || 0) === 0);
+  }
+
+  if (stockFilter.value === "low") {
+    filtered = filtered.filter(item =>
+      Number(item.balance || 0) > 0 && Number(item.balance || 0) <= threshold
+    );
+  }
+
   return filtered;
 }
 
@@ -351,6 +372,7 @@ function resetFilters() {
   longRangeOnly.checked = false;
   searchFilter.value = "";
   lowBalanceThreshold.value = "10";
+  stockFilter.value = "all";
   applyFilters();
 }
 
@@ -371,6 +393,17 @@ function updateFilterStatus(items) {
   if (unitFilter.value !== "all") active.push(`підрозділ: ${unitFilter.value}`);
   if (longRangeOnly.checked) active.push("тільки далекобійні");
   if (searchFilter.value.trim()) active.push(`пошук: ${searchFilter.value.trim()}`);
+
+  const stockFilterLabels = {
+    problem: "тільки вузькі місця",
+    zero: "тільки нульові",
+    low: "тільки малий залишок"
+  };
+
+  if (stockFilter.value !== "all") {
+    active.push(stockFilterLabels[stockFilter.value] || "фільтр залишків");
+  }
+
   active.push(`малий залишок ≤${getLowBalanceThreshold()}`);
 
   filterStatus.hidden = false;
