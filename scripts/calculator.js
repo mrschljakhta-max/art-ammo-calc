@@ -16,6 +16,26 @@ const actionLongOnly = document.getElementById("actionLongOnly");
 const actionStatusFilter = document.getElementById("actionStatusFilter");
 const exportDecisionPackageBtn = document.getElementById("exportDecisionPackageBtn");
 const importDecisionPackageFile = document.getElementById("importDecisionPackageFile");
+const appVersion = document.getElementById("appVersion");
+
+function getAppMeta() {
+  return window.ART_AMMO_APP_META || {
+    appName: "Art Ammo",
+    version: "0.23",
+    buildLabel: "v23-report-version",
+    buildDate: "2026-05-07",
+    logicProfile: "Excel локально + аналітика залишків + журнал дій"
+  };
+}
+
+function initAppVersionBadge() {
+  if (!appVersion) return;
+  const meta = getAppMeta();
+  appVersion.textContent = `${meta.appName} ${meta.version}`;
+  appVersion.title = `${meta.buildLabel} · ${meta.buildDate}`;
+}
+
+initAppVersionBadge();
 
 analyzeBtn.addEventListener("click", analyzeWorkbook);
 unitFilter.addEventListener("change", applyFilters);
@@ -602,8 +622,13 @@ function getReportPassport(items, grouped) {
   const analyzedAt = formatDateTime(window.ArtAmmoState?.analyzedAt);
   const threshold = getLowBalanceThreshold();
 
+  const meta = getAppMeta();
+
   return [
     { label: "Файл Excel", value: fileName },
+    { label: "Версія системи", value: `${meta.appName} ${meta.version}` },
+    { label: "Збірка", value: `${meta.buildLabel} / ${meta.buildDate}` },
+    { label: "Профіль логіки", value: meta.logicProfile || "—" },
     { label: "Час завантаження", value: loadedAt },
     { label: "Час аналізу", value: analyzedAt },
     { label: "Показано рядків", value: `${items.length} з ${totalRows}` },
@@ -2087,10 +2112,16 @@ function buildDecisionPackagePayload() {
     lowBalanceThreshold: threshold
   };
 
+  const meta = getAppMeta();
+
   return {
-    app: "Art Ammo",
+    app: meta.appName || "Art Ammo",
     type: "decision-package",
-    version: 1,
+    packageVersion: 2,
+    appVersion: meta.version,
+    buildLabel: meta.buildLabel,
+    buildDate: meta.buildDate,
+    logicProfile: meta.logicProfile,
     exportedAt: new Date().toISOString(),
     passport,
     totals,
@@ -2270,6 +2301,9 @@ function decisionPackageText(payload) {
 
   lines.push("ART AMMO — ПАКЕТ РІШЕННЯ");
   lines.push("================================");
+  lines.push(`Версія системи: ${payload.app || "Art Ammo"} ${payload.appVersion || "—"}`);
+  lines.push(`Збірка: ${payload.buildLabel || "—"} / ${payload.buildDate || "—"}`);
+  lines.push(`Профіль логіки: ${payload.logicProfile || "—"}`);
   lines.push(`Сформовано: ${new Date(payload.exportedAt).toLocaleString("uk-UA")}`);
   lines.push(`Файл: ${payload.passport?.fileName || "—"}`);
   lines.push(`Активні фільтри: ${payload.passport?.filters || "—"}`);
@@ -2344,8 +2378,11 @@ async function exportDecisionPackage() {
     zip.file("commander_summary.txt", decisionPackageText(payload));
     zip.file("action_log.csv", "\ufeff" + actionCsv);
     zip.file("action_statuses.json", JSON.stringify({
-      app: "Art Ammo",
+      app: payload.app || "Art Ammo",
       type: "action-statuses",
+      appVersion: payload.appVersion,
+      buildLabel: payload.buildLabel,
+      buildDate: payload.buildDate,
       exportedAt: payload.exportedAt,
       statuses: payload.actionStatuses
     }, null, 2));
