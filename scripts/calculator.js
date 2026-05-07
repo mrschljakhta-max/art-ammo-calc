@@ -5,6 +5,8 @@ const unitFilter = document.getElementById("unitFilter");
 const longRangeOnly = document.getElementById("longRangeOnly");
 const searchFilter = document.getElementById("searchFilter");
 const resetFiltersBtn = document.getElementById("resetFiltersBtn");
+const exportStatusesBtn = document.getElementById("exportStatusesBtn");
+const importStatusesFile = document.getElementById("importStatusesFile");
 const filterStatus = document.getElementById("filterStatus");
 const lowBalanceThreshold = document.getElementById("lowBalanceThreshold");
 const stockFilter = document.getElementById("stockFilter");
@@ -18,6 +20,8 @@ unitFilter.addEventListener("change", applyFilters);
 longRangeOnly.addEventListener("change", applyFilters);
 searchFilter.addEventListener("input", applyFilters);
 resetFiltersBtn.addEventListener("click", resetFilters);
+if (exportStatusesBtn) exportStatusesBtn.addEventListener("click", exportActionStatusesToJson);
+if (importStatusesFile) importStatusesFile.addEventListener("change", importActionStatusesFromJson);
 lowBalanceThreshold.addEventListener("input", applyFilters);
 stockFilter.addEventListener("change", applyFilters);
 sortFilter.addEventListener("change", applyFilters);
@@ -59,6 +63,7 @@ function analyzeWorkbook() {
 
   document.getElementById("exportExcelBtn").disabled = false;
   document.getElementById("exportPdfBtn").disabled = false;
+  if (exportStatusesBtn) exportStatusesBtn.disabled = false;
 
   if (typeof setStatus === "function") {
     setStatus(`Проаналізовано: ${unitItems.length} рядків`, "ok");
@@ -628,6 +633,118 @@ function renderReportPassport(passport) {
   `;
 }
 
+function getActionStatusIntegrity(plan) {
+  const currentPlan = Array.isArray(plan) ? plan : [];
+  const statuses = getAllActionStatuses();
+  const allowed = new Set(["planned", "done", "rejected"]);
+  const currentIds = new Set(currentPlan.map(item => item.actionId));
+  const counters = {
+    total: currentPlan.length,
+    explicit: 0,
+    missing: 0,
+    planned: 0,
+    done: 0,
+    rejected: 0,
+    orphaned: 0,
+    importedTotal: 0
+  };
+
+  currentPlan.forEach(item => {
+    const hasSaved = Object.prototype.hasOwnProperty.call(statuses, item.actionId);
+    const savedStatus = hasSaved && allowed.has(String(statuses[item.actionId]))
+      ? String(statuses[item.actionId])
+      : "planned";
+
+    if (hasSaved) {
+      counters.explicit += 1;
+    } else {
+      counters.missing += 1;
+    }
+
+    if (savedStatus === "done") counters.done += 1;
+    else if (savedStatus === "rejected") counters.rejected += 1;
+    else counters.planned += 1;
+  });
+
+  Object.entries(statuses).forEach(([actionId, status]) => {
+    if (!allowed.has(String(status))) return;
+
+    counters.importedTotal += 1;
+
+    if (!currentIds.has(actionId)) {
+      counters.orphaned += 1;
+    }
+  });
+
+  return counters;
+}
+
+function renderActionStatusIntegrity(integrity) {
+  if (!integrity || !integrity.total) return "";
+
+  const healthClass = integrity.orphaned > 0
+    ? "integrity-warning"
+    : integrity.missing > 0
+      ? "integrity-soft"
+      : "integrity-ok";
+
+  const healthText = integrity.orphaned > 0
+    ? "Є старі/зайві статуси з імпортованого JSON"
+    : integrity.missing > 0
+      ? "Частина дій ще без явно збереженого статусу"
+      : "Статуси відповідають поточному журналу дій";
+
+  return `
+    <div class="action-integrity-panel ${healthClass}">
+      <div class="action-integrity-header">
+        <h2>Контроль статусів журналу дій</h2>
+        <span>${escapeHtml(healthText)}</span>
+      </div>
+
+      <div class="action-integrity-grid">
+        <div class="action-integrity-card">
+          <div class="impact-label">Поточних дій</div>
+          <div class="impact-value">${integrity.total}</div>
+        </div>
+
+        <div class="action-integrity-card">
+          <div class="impact-label">Явно збережено</div>
+          <div class="impact-value">${integrity.explicit}</div>
+        </div>
+
+        <div class="action-integrity-card ${integrity.missing ? "integrity-card-warning" : ""}">
+          <div class="impact-label">Без рішення</div>
+          <div class="impact-value">${integrity.missing}</div>
+        </div>
+
+        <div class="action-integrity-card">
+          <div class="impact-label">Заплановано</div>
+          <div class="impact-value">${integrity.planned}</div>
+        </div>
+
+        <div class="action-integrity-card">
+          <div class="impact-label">Виконано</div>
+          <div class="impact-value">${integrity.done}</div>
+        </div>
+
+        <div class="action-integrity-card">
+          <div class="impact-label">Відхилено</div>
+          <div class="impact-value">${integrity.rejected}</div>
+        </div>
+
+        <div class="action-integrity-card ${integrity.orphaned ? "integrity-card-danger" : ""}">
+          <div class="impact-label">Зайві статуси JSON</div>
+          <div class="impact-value">${integrity.orphaned}</div>
+        </div>
+      </div>
+
+      <div class="action-integrity-note">
+        “Без рішення” означає, що дія показана в поточному журналі, але її статус ще не був явно змінений або збережений. “Зайві статуси JSON” означають, що в імпортованому файлі є статуси для дій, яких уже немає в поточних рекомендаціях.
+      </div>
+    </div>
+  `;
+}
+
 function groupByCategory(items) {
   const grouped = {};
 
@@ -1171,6 +1288,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const exchangeBaseItems = window.ArtAmmoState?.unitItems || unitItems;
   const exchangeRecommendations = getFilteredExchangeRecommendations(exchangeBaseItems, getLowBalanceThreshold(), 12);
   const exchangeActionPlan = getFilteredExchangeActionPlan(exchangeRecommendations);
+  const actionStatusIntegrity = getActionStatusIntegrity(exchangeActionPlan);
 
   let html = `
     <div class="analysis-grid">
@@ -1243,6 +1361,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     ${renderExchangeRecommendations(exchangeRecommendations)}
     ${renderExchangeImpact(exchangeRecommendations)}
     ${renderExchangeActionPlan(exchangeActionPlan)}
+    ${renderActionStatusIntegrity(actionStatusIntegrity)}
     ${renderRecommendations(recommendations)}
     ${renderCommanderSummary(commanderSummary)}
   `;
@@ -1770,23 +1889,102 @@ function getActionId(item) {
   ].map(part => String(part ?? "").trim()).join("|");
 }
 
-function getActionStatus(actionId) {
+
+function getAllActionStatuses() {
   try {
-    const statuses = JSON.parse(localStorage.getItem("artAmmoActionStatuses") || "{}");
-    return statuses[actionId] || "planned";
+    return JSON.parse(localStorage.getItem("artAmmoActionStatuses") || "{}");
   } catch (error) {
-    return "planned";
+    return {};
   }
 }
 
-function setActionStatus(actionId, status) {
+function saveAllActionStatuses(statuses) {
   try {
-    const statuses = JSON.parse(localStorage.getItem("artAmmoActionStatuses") || "{}");
-    statuses[actionId] = status;
-    localStorage.setItem("artAmmoActionStatuses", JSON.stringify(statuses));
+    localStorage.setItem("artAmmoActionStatuses", JSON.stringify(statuses || {}));
   } catch (error) {
-    console.warn("Не вдалося зберегти статус дії", error);
+    console.warn("Не вдалося зберегти статуси дій", error);
   }
+}
+
+function exportActionStatusesToJson() {
+  const statuses = getAllActionStatuses();
+  const passport = window.ArtAmmoState?.reportPassport || {};
+  const payload = {
+    app: "Art Ammo",
+    type: "action-statuses",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    sourceFileName: passport.fileName || window.ArtAmmoState?.fileName || "",
+    statuses
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json;charset=utf-8"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const fileDate = new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = `art_ammo_action_statuses_${fileDate}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importActionStatusesFromJson(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    try {
+      const payload = JSON.parse(String(e.target.result || "{}"));
+      const incoming = payload.statuses || payload;
+
+      if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
+        throw new Error("Невірна структура JSON");
+      }
+
+      const allowed = new Set(["planned", "done", "rejected"]);
+      const current = getAllActionStatuses();
+      let importedCount = 0;
+
+      Object.entries(incoming).forEach(([actionId, status]) => {
+        if (allowed.has(String(status))) {
+          current[actionId] = String(status);
+          importedCount += 1;
+        }
+      });
+
+      saveAllActionStatuses(current);
+      alert(`Імпортовано статусів: ${importedCount}`);
+      applyFilters();
+    } catch (error) {
+      alert("Не вдалося імпортувати статуси. Перевір JSON-файл.");
+      console.error(error);
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  reader.readAsText(file, "utf-8");
+}
+
+window.exportActionStatusesToJson = exportActionStatusesToJson;
+window.importActionStatusesFromJson = importActionStatusesFromJson;
+
+function getActionStatus(actionId) {
+  const statuses = getAllActionStatuses();
+  return statuses[actionId] || "planned";
+}
+
+function setActionStatus(actionId, status) {
+  const statuses = getAllActionStatuses();
+  statuses[actionId] = status;
+  saveAllActionStatuses(statuses);
 }
 
 function updateActionStatus(actionId, status) {
