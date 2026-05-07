@@ -16,31 +16,34 @@
 </head>
 
 <body>
-  <div class="app-container">
-    <div class="upload-card">
+  <main class="app-container">
+    <section class="upload-card">
+      <div class="hero-row">
+        <div>
+          <h1>ART AMMO</h1>
+          <p class="subtitle">Система аналізу комплектів</p>
+        </div>
+        <div class="status-pill" id="appStatus">Очікує Excel</div>
+      </div>
 
-      <h1>ART AMMO</h1>
+      <div class="actions-row">
+        <label class="upload-button">
+          Завантажити Excel
+          <input type="file" id="excelFile" accept=".xlsx,.xls" hidden>
+        </label>
 
-      <p class="subtitle">
-        Система аналізу комплектів
-      </p>
+        <button id="analyzeBtn" class="analyze-button" disabled>
+          Аналізувати файл
+        </button>
 
-      <label class="upload-button">
-        Завантажити Excel
-        <input type="file" id="excelFile" accept=".xlsx,.xls" hidden>
-      </label>
+        <button id="exportExcelBtn" class="analyze-button" disabled>
+          Експорт Excel
+        </button>
 
-      <button id="analyzeBtn" class="analyze-button" disabled>
-        Аналізувати файл
-      </button>
-
-      <button id="exportExcelBtn" class="analyze-button" disabled>
-        Експорт Excel
-      </button>
-
-      <button id="exportPdfBtn" class="analyze-button" disabled>
-        PDF-звіт
-      </button>
+        <button id="exportPdfBtn" class="analyze-button" disabled>
+          PDF-звіт
+        </button>
+      </div>
 
       <div id="fileInfo"></div>
 
@@ -61,17 +64,28 @@
           placeholder="Пошук: снаряд, заряд, підрозділ..."
         >
 
-        <button id="resetFiltersBtn" class="analyze-button">
+        <label class="threshold-control">
+          Малий залишок ≤
+          <input
+            type="number"
+            id="lowBalanceThreshold"
+            min="1"
+            max="9999"
+            step="1"
+            value="10"
+          >
+        </label>
+
+        <button id="resetFiltersBtn" class="analyze-button small-button">
           Скинути фільтри
         </button>
       </div>
 
+      <div id="filterStatus" class="filter-status" hidden></div>
       <div id="sheetList"></div>
-
       <div id="analysisPanel"></div>
-
-    </div>
-  </div>
+    </section>
+  </main>
 
   <script src="./scripts/schema.js"></script>
   <script src="./scripts/excel.js"></script>
