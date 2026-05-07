@@ -1,13 +1,9 @@
-<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="7" y="7" width="114" height="114" rx="18" fill="#080B10" stroke="#EF2222" stroke-width="2"/>
-  <path d="M39 28L92 55V76L54 96L35 86L71 68L35 50V30L75 51L92 42L55 23L39 28Z" fill="url(#g)"/>
-  <path d="M35 50L71 68L54 76L35 58V50Z" fill="#7A001F" opacity="0.8"/>
-  <path d="M75 51L92 42V55L75 64V51Z" fill="#B50C20" opacity="0.9"/>
-  <defs>
-    <linearGradient id="g" x1="35" y1="23" x2="92" y2="96" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="0.38" stop-color="#F32222"/>
-      <stop offset="1" stop-color="#7A001F"/>
-    </linearGradient>
-  </defs>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="96" fill="#05070B"/>
+  <path d="M96 126L256 36L416 126V206L256 296L96 206V126Z" fill="#FF2D2D" fill-opacity="0.92"/>
+  <path d="M96 221L256 311L416 221V306L256 476L96 386V221Z" fill="#7A001F"/>
+  <path d="M145 144L256 82L367 144L256 206L145 144Z" fill="#FF4A3D"/>
+  <path d="M145 368L256 430L367 368L256 306L145 368Z" fill="#FF2D2D"/>
+  <path d="M96 126L256 216L416 126" stroke="#FFB020" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M96 386L256 296L416 386" stroke="#E8EDF4" stroke-width="18" stroke-linejoin="round"/>
 </svg>
