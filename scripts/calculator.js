@@ -24,8 +24,8 @@ const appVersion = document.getElementById("appVersion");
 function getAppMeta() {
   return window.ART_AMMO_APP_META || {
     appName: "Art Ammo",
-    version: "0.28",
-    buildLabel: "v28-alias-dictionary",
+    version: "0.29",
+    buildLabel: "v29-alias-editor",
     buildDate: "2026-05-07",
     logicProfile: "Excel локально + аналітика залишків + журнал дій"
   };
@@ -58,6 +58,21 @@ if (importDecisionPackageFile) importDecisionPackageFile.addEventListener("chang
 if (exportAliasDictionaryBtn) exportAliasDictionaryBtn.addEventListener("click", exportAliasDictionaryToJson);
 if (importAliasDictionaryFile) importAliasDictionaryFile.addEventListener("change", importAliasDictionaryFromJson);
 if (resetAliasDictionaryBtn) resetAliasDictionaryBtn.addEventListener("click", resetAliasDictionary);
+
+// Динамічні кнопки редактора словника відповідностей
+document.addEventListener("click", (event) => {
+  const target = event.target;
+
+  if (target?.id === "addAliasEntryBtn") {
+    addAliasDictionaryManualEntry();
+  }
+
+  if (target?.classList?.contains("delete-alias-entry-btn")) {
+    const type = target.dataset.type;
+    const key = target.dataset.key;
+    deleteAliasDictionaryEntry(type, key);
+  }
+});
 
 function analyzeWorkbook() {
   const workbook = window.ArtAmmoState?.workbook;
@@ -1685,16 +1700,24 @@ function renderAliasDictionaryPanel() {
     const entries = Object.entries(dictionary[type] || {});
 
     if (!entries.length) {
-      return `<tr><td colspan="5" class="muted-cell">Записів поки немає. Натисни “Експорт словника”, щоб сформувати чернетку з підозрілих назв.</td></tr>`;
+      return `<tr><td colspan="6" class="muted-cell">Записів поки немає. Додай відповідність вручну або натисни “Експорт словника”, щоб сформувати чернетку з підозрілих назв.</td></tr>`;
     }
 
-    return entries.slice(0, 50).map(([key, entry]) => `
+    return entries.slice(0, 80).map(([key, entry]) => `
       <tr>
         <td>${label}</td>
         <td><b>${escapeHtml(entry.canonicalName || key)}</b><div class="alias-key">${escapeHtml(key)}</div></td>
         <td>${(entry.aliases || []).length}</td>
         <td>${escapeHtml(entry.source || "manual/import")}</td>
         <td>${(entry.aliases || []).map(alias => `<span class="alias-chip">${escapeHtml(alias)}</span>`).join("")}</td>
+        <td>
+          <button
+            class="mini-danger-btn delete-alias-entry-btn"
+            data-type="${escapeHtml(type)}"
+            data-key="${escapeHtml(key)}"
+            title="Видалити запис зі словника"
+          >Видалити</button>
+        </td>
       </tr>
     `).join("");
   };
@@ -1728,6 +1751,20 @@ function renderAliasDictionaryPanel() {
         </div>
       </div>
 
+      <div class="alias-editor-card">
+        <div class="alias-editor-title">Ручне додавання відповідності</div>
+        <div class="alias-editor-grid">
+          <select id="aliasEditorType" class="filter-control">
+            <option value="projectiles">Снаряд</option>
+            <option value="charges">Заряд</option>
+          </select>
+          <input id="aliasEditorAlias" class="filter-control" type="text" placeholder="Варіант у файлі: М-483 / 483 / M 483">
+          <input id="aliasEditorCanonical" class="filter-control" type="text" placeholder="Канонічна назва: M483">
+          <button id="addAliasEntryBtn" class="analyze-button small-button">Додати</button>
+        </div>
+        <div class="alias-editor-hint">Приклад: варіант написання <b>М-483</b> → канонічна назва <b>M483</b>. Після додавання аналіз автоматично оновиться.</div>
+      </div>
+
       <div class="table-wrap compact-wrap">
         <table>
           <thead>
@@ -1737,6 +1774,7 @@ function renderAliasDictionaryPanel() {
               <th>Аліасів</th>
               <th>Джерело</th>
               <th>Варіанти</th>
+              <th>Дія</th>
             </tr>
           </thead>
           <tbody>
@@ -1747,6 +1785,70 @@ function renderAliasDictionaryPanel() {
       </div>
     </div>
   `;
+}
+
+function addAliasDictionaryManualEntry() {
+  const type = document.getElementById("aliasEditorType")?.value;
+  const aliasRaw = cleanCell(document.getElementById("aliasEditorAlias")?.value || "");
+  const canonicalRaw = cleanCell(document.getElementById("aliasEditorCanonical")?.value || "");
+
+  if (!["projectiles", "charges"].includes(type)) {
+    alert("Оберіть тип запису: снаряд або заряд.");
+    return;
+  }
+
+  if (!aliasRaw || !canonicalRaw) {
+    alert("Заповни варіант написання і канонічну назву.");
+    return;
+  }
+
+  const normalizedAlias = normalizeAmmoToken(aliasRaw, type === "projectiles" ? "projectile" : "charge");
+  const normalizedCanonical = normalizeAmmoToken(canonicalRaw, type === "projectiles" ? "projectile" : "charge");
+  const key = getCanonicalKey(normalizedAlias);
+
+  const dictionary = getAliasDictionary();
+  if (!dictionary[type]) dictionary[type] = {};
+
+  const existing = dictionary[type][key] || {
+    canonicalName: normalizedCanonical,
+    aliases: [],
+    source: "manual",
+    rows: 0,
+    totalBalance: 0,
+    updatedAt: null
+  };
+
+  const aliases = new Set(existing.aliases || []);
+  aliases.add(aliasRaw);
+  aliases.add(normalizedAlias);
+
+  dictionary[type][key] = {
+    ...existing,
+    canonicalName: normalizedCanonical,
+    aliases: Array.from(aliases).filter(Boolean).sort((a, b) => a.localeCompare(b, "uk")),
+    source: existing.source === "auto-watchlist" ? "manual+auto" : "manual",
+    updatedAt: new Date().toISOString()
+  };
+
+  saveAliasDictionary(dictionary);
+
+  const aliasInput = document.getElementById("aliasEditorAlias");
+  const canonicalInput = document.getElementById("aliasEditorCanonical");
+  if (aliasInput) aliasInput.value = "";
+  if (canonicalInput) canonicalInput.value = "";
+
+  if (window.ArtAmmoState?.workbook) analyzeWorkbook();
+}
+
+function deleteAliasDictionaryEntry(type, key) {
+  if (!["projectiles", "charges"].includes(type) || !key) return;
+  if (!confirm("Видалити цей запис зі словника відповідностей?")) return;
+
+  const dictionary = getAliasDictionary();
+  if (dictionary[type]) delete dictionary[type][key];
+  saveAliasDictionary(dictionary);
+
+  if (window.ArtAmmoState?.workbook) analyzeWorkbook();
 }
 
 
