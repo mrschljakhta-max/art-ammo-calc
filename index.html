@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.37</div>
+      <div class="core-version">BASTION CORE v0.38</div>
     </aside>
 
     <main class="bastion-main">
@@ -361,19 +361,64 @@
       </section>
 
       <section class="view-panel" data-view-panel="reports">
-        <section class="command-panel primary-panel mode-placeholder">
+        <section class="command-panel primary-panel reports-center">
           <div class="panel-header compact-header">
             <div>
               <h2>Звіти та пакети рішень</h2>
-              <p>PDF, Excel, decision package, commander summary і статуси дій.</p>
+              <p>Експорт PDF, Excel, командирського висновку та службового пакета рішення.</p>
             </div>
-            <div class="panel-badge">REPORTS</div>
+            <div class="panel-badge">REPORTS CENTER</div>
           </div>
-          <div class="placeholder-grid live-mode-grid">
-            <div class="preview-card"><strong>PDF-звіт</strong><p>Короткий висновок + таблиці.</p><span id="reportsPdfPreview" class="mini-value">готово після аналізу</span></div>
-            <div class="preview-card"><strong>Excel</strong><p>Підсумок, детально, підрозділи.</p><span id="reportsExcelPreview" class="mini-value">готово після аналізу</span></div>
-            <div class="preview-card"><strong>Decision Package</strong><p>JSON/ZIP для передачі та відновлення.</p><span id="reportsPackagePreview" class="mini-value">—</span></div>
+
+          <div class="reports-command-grid">
+            <article class="report-action-card report-pdf">
+              <div class="report-action-icon">PDF</div>
+              <div>
+                <h3>PDF-звіт</h3>
+                <p>Зведений документ з метриками, висновками, рекомендаціями та таблицями.</p>
+                <span id="reportsPdfPreview" class="mini-value">готово після аналізу</span>
+              </div>
+              <button class="context-action report-run-btn" id="reportsRunPdfBtn">Сформувати PDF</button>
+            </article>
+
+            <article class="report-action-card report-xlsx">
+              <div class="report-action-icon">XLS</div>
+              <div>
+                <h3>Excel-експорт</h3>
+                <p>Підсумок, деталізація, окремі аркуші підрозділів та аналітичні блоки.</p>
+                <span id="reportsExcelPreview" class="mini-value">готово після аналізу</span>
+              </div>
+              <button class="context-action report-run-btn" id="reportsRunExcelBtn">Сформувати Excel</button>
+            </article>
+
+            <article class="report-action-card report-package">
+              <div class="report-action-icon">ZIP</div>
+              <div>
+                <h3>Пакет рішення</h3>
+                <p>JSON-пакет із паспортом звіту, статусами, висновками та журналом дій.</p>
+                <span id="reportsPackagePreview" class="mini-value">—</span>
+              </div>
+              <button class="context-action report-run-btn" id="reportsRunPackageBtn">Сформувати пакет</button>
+            </article>
           </div>
+
+          <div class="reports-status-grid">
+            <div class="ops-card">
+              <div class="ops-title">Поточний експорт</div>
+              <div class="ops-row"><span>Рядків</span><strong id="reportsRowsCount">—</strong></div>
+              <div class="ops-row"><span>Підрозділів</span><strong id="reportsUnitsCount">—</strong></div>
+              <div class="ops-row"><span>Фільтри</span><strong id="reportsFiltersState">—</strong></div>
+            </div>
+
+            <div class="ops-card">
+              <div class="ops-title">Склад пакета</div>
+              <div class="report-checkline"><span></span> report_passport.json</div>
+              <div class="report-checkline"><span></span> commander_summary.txt</div>
+              <div class="report-checkline"><span></span> action_log.csv</div>
+              <div class="report-checkline"><span></span> status_backup.json</div>
+            </div>
+          </div>
+
           <div id="reportsLiveList" class="mode-live-list"></div>
         </section>
       </section>
