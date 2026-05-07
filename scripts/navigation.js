@@ -62,6 +62,53 @@
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 10;
   }
 
+  function updateImportCenter() {
+    const state = window.ArtAmmoState || {};
+    const workbook = state.workbook;
+    const sheetNames = workbook?.SheetNames || [];
+    const items = Array.isArray(state.unitItems) ? state.unitItems : [];
+    const summaryName = window.ART_AMMO_SCHEMA?.SUMMARY_SHEET_NAME || "АГ3+АР";
+    const hasSummary = sheetNames.some(name => String(name).trim().toLowerCase() === summaryName.toLowerCase());
+    const unitSheets = sheetNames.filter(name => String(name).trim().toLowerCase() !== summaryName.toLowerCase());
+
+    const fileName = state.sourceFileName || document.getElementById("dashFileState")?.textContent || "очікується";
+
+    setText("importFileName", fileName || "очікується");
+    setText("importSheetCount", sheetNames.length ? formatNumber(sheetNames.length) : "—");
+    setText("importSchemaState", sheetNames.length ? (hasSummary ? "структура виявлена" : "немає зведеного") : "—");
+    setText("importAnalysisState", items.length ? `${formatNumber(items.length)} ряд.` : "—");
+    setText("schemaSummarySheetText", hasSummary ? `${summaryName} — знайдено` : `${summaryName} — не знайдено`);
+    setText("schemaUnitSheetsText", unitSheets.length ? `${formatNumber(unitSheets.length)} арк. підрозділів` : "очікується файл");
+    setText("schemaColumnMapText", "C — БК, D — дальність, E — отримання, F — витрата, G — залишок");
+
+    toggleImportCard("schemaSummarySheetCard", sheetNames.length ? (hasSummary ? "ok" : "warn") : "idle");
+    toggleImportCard("schemaUnitSheetsCard", unitSheets.length ? "ok" : "idle");
+    toggleImportCard("schemaColumnMapCard", sheetNames.length ? "ok" : "idle");
+
+    const preview = document.getElementById("importSheetPreview");
+    if (preview) {
+      if (!sheetNames.length) {
+        preview.innerHTML = `<div class="alert-item muted">Після завантаження Excel тут з’явиться перелік аркушів.</div>`;
+      } else {
+        preview.innerHTML = sheetNames.map(name => {
+          const isSummary = String(name).trim().toLowerCase() === summaryName.toLowerCase();
+          const rows = (state.analysisItems || []).filter(item => item.sheetName === name).length;
+          return `<div class="import-sheet-item ${isSummary ? "summary" : "unit"}">
+            <span>${name}</span>
+            <strong>${isSummary ? "зведений" : `${formatNumber(rows)} ряд.`}</strong>
+          </div>`;
+        }).join("");
+      }
+    }
+  }
+
+  function toggleImportCard(id, state) {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.remove("is-ok", "is-warn", "is-idle");
+    node.classList.add(state === "ok" ? "is-ok" : state === "warn" ? "is-warn" : "is-idle");
+  }
+
   function updateDashboardMetrics() {
     const state = window.ArtAmmoState || {};
     const items = Array.isArray(state.unitItems) ? state.unitItems : [];
@@ -129,6 +176,7 @@
     setText("dashReadinessState", readiness);
     updateContextAlerts({ items, grouped, threshold, critical, longRange, totalBalance, exchangeCount, qualityIssues, readiness });
     updateModePreviews({ items, grouped, threshold, critical, longRange, totalBalance, exchangeCount, qualityIssues });
+    updateImportCenter();
 
   }
 
