@@ -900,3 +900,78 @@ tr.row-long:hover td {
     grid-template-columns: repeat(2, minmax(160px, 1fr));
   }
 }
+
+
+.action-plan-panel {
+  margin-top: 18px;
+  padding: 22px;
+  border-radius: 20px;
+  background: rgba(168, 85, 247, 0.075);
+  border: 1px solid rgba(168, 85, 247, 0.18);
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.06);
+}
+
+.action-plan-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.action-plan-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.action-plan-header span {
+  opacity: 0.68;
+  font-size: 13px;
+  text-align: right;
+}
+
+.action-priority {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.action-priority-I {
+  background: rgba(248, 113, 113, 0.18);
+  border: 1px solid rgba(248, 113, 113, 0.34);
+  color: #fecaca;
+}
+
+.action-priority-II {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  color: #fde68a;
+}
+
+.action-priority-III {
+  background: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  color: #e2e8f0;
+}
+
+.action-plan-note {
+  margin-top: 14px;
+  font-size: 13px;
+  opacity: 0.72;
+  line-height: 1.5;
+}
+
+.action-check {
+  border-color: rgba(120, 190, 255, 0.16);
+  background: rgba(85, 150, 255, 0.08);
+}
+
+.action-plan-header span strong,
+.exchange-header span strong {
+  color: rgba(255, 255, 255, 0.94);
+}
