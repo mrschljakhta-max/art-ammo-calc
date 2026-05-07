@@ -62,6 +62,109 @@
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 10;
   }
 
+
+  function getReportItems() {
+    if (typeof window.getCurrentFilteredItems === "function") {
+      try { return window.getCurrentFilteredItems(); } catch (error) { return []; }
+    }
+    return Array.isArray(window.ArtAmmoState?.unitItems) ? window.ArtAmmoState.unitItems : [];
+  }
+
+  function getReportFilterLabel() {
+    const parts = [];
+    const unitFilter = document.getElementById("unitFilter");
+    const longRangeOnly = document.getElementById("longRangeOnly");
+    const searchFilter = document.getElementById("searchFilter");
+    const stockFilter = document.getElementById("stockFilter");
+    const sortMode = document.getElementById("sortMode");
+
+    if (unitFilter && unitFilter.value && unitFilter.value !== "all") parts.push(`підрозділ: ${unitFilter.value}`);
+    if (longRangeOnly?.checked) parts.push("далекобійні");
+    if (searchFilter?.value?.trim()) parts.push(`пошук: ${searchFilter.value.trim()}`);
+    if (stockFilter && stockFilter.value && stockFilter.value !== "all") parts.push(`залишки: ${stockFilter.value}`);
+    if (sortMode && sortMode.value && sortMode.value !== "file") parts.push(`сортування: ${sortMode.value}`);
+
+    return parts.length ? parts.join("; ") : "без фільтрів";
+  }
+
+  function downloadTextFile(filename, content, mime = "application/json") {
+    const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function buildDecisionPackageFallback() {
+    const state = window.ArtAmmoState || {};
+    const items = getReportItems();
+    const grouped = typeof window.groupByUnit === "function" ? window.groupByUnit(items) : {};
+    const now = new Date();
+
+    return {
+      app: "BASTION",
+      version: "v0.38",
+      generatedAt: now.toISOString(),
+      sourceFileName: state.sourceFileName || "unknown",
+      filters: getReportFilterLabel(),
+      rows: items.length,
+      units: Object.keys(grouped).length,
+      reportPassport: state.reportPassport || null,
+      commanderSummary: state.commanderSummary || [],
+      actionLog: state.actionLog || [],
+      actionStatuses: state.actionStatuses || {},
+      qualityIssues: state.dataQualityIssues || state.qualityIssues || [],
+      exportItems: items.map(item => ({
+        unit: item.unit,
+        projectile: item.projectile,
+        charge: item.charge,
+        rangeKm: item.rangeKm,
+        longRange: item.longRange,
+        balance: item.balance,
+        received: item.received,
+        spent: item.spent
+      }))
+    };
+  }
+
+  function runReportAction(type) {
+    const items = getReportItems();
+    if (!items.length) {
+      alert("Спочатку завантаж Excel-файл і дочекайся аналізу.");
+      return;
+    }
+
+    if (type === "pdf") {
+      document.getElementById("exportPdfBtn")?.click();
+      return;
+    }
+
+    if (type === "excel") {
+      document.getElementById("exportExcelBtn")?.click();
+      return;
+    }
+
+    const existingPackageButton = document.getElementById("exportDecisionPackageBtn") || document.getElementById("decisionPackageExportBtn");
+    if (existingPackageButton) {
+      existingPackageButton.click();
+      return;
+    }
+
+    const payload = buildDecisionPackageFallback();
+    const date = new Date().toISOString().slice(0, 10);
+    downloadTextFile(`bastion_decision_package_${date}.json`, JSON.stringify(payload, null, 2));
+  }
+
+  function bindReportsCenter() {
+    document.getElementById("reportsRunPdfBtn")?.addEventListener("click", () => runReportAction("pdf"));
+    document.getElementById("reportsRunExcelBtn")?.addEventListener("click", () => runReportAction("excel"));
+    document.getElementById("reportsRunPackageBtn")?.addEventListener("click", () => runReportAction("package"));
+  }
+
   function updateImportCenter() {
     const state = window.ArtAmmoState || {};
     const workbook = state.workbook;
@@ -262,9 +365,13 @@
     ` : `<div class="alert-item muted">Після аналізу система покаже помилки й попередження файлу.</div>`);
 
     setText("reportsPackagePreview", items.length ? "можна формувати" : "—");
+    setText("reportsRowsCount", items.length ? pluralRows(items.length) : "—");
+    setText("reportsUnitsCount", items.length ? formatNumber(Object.keys(grouped).length) : "—");
+    setText("reportsFiltersState", items.length ? getReportFilterLabel() : "—");
     setHTML("reportsLiveList", items.length ? `
       <div class="mode-live-row"><span>Поточний обсяг експорту</span><strong>${pluralRows(items.length)}</strong></div>
       <div class="mode-live-row"><span>Активних підрозділів</span><strong>${formatNumber(Object.keys(grouped).length)}</strong></div>
+      <div class="mode-live-row"><span>Фільтри</span><strong>${getReportFilterLabel()}</strong></div>
     ` : `<div class="alert-item muted">Завантаж файл, щоб активувати PDF, Excel і пакет рішення.</div>`);
   }
 
@@ -274,6 +381,7 @@
     observer.observe(analysisPanel, { childList: true, subtree: true });
   }
 
+  bindReportsCenter();
   setInterval(updateDashboardMetrics, 1500);
   updateDashboardMetrics();
 })();
