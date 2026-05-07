@@ -107,7 +107,7 @@
 
     return {
       app: "BASTION",
-      version: "v0.39",
+      version: "v0.40",
       generatedAt: now.toISOString(),
       sourceFileName: state.sourceFileName || "unknown",
       filters: getReportFilterLabel(),
@@ -280,6 +280,7 @@
     updateContextAlerts({ items, grouped, threshold, critical, longRange, totalBalance, exchangeCount, qualityIssues, readiness });
     updateModePreviews({ items, grouped, threshold, critical, longRange, totalBalance, exchangeCount, qualityIssues });
     updateImportCenter();
+    updateHistoryCenter();
 
   }
 
@@ -291,6 +292,207 @@
   function setHTML(id, value) {
     const node = document.getElementById(id);
     if (node) node.innerHTML = value;
+  }
+
+  const HISTORY_STORAGE_KEY = "bastion.history.snapshots.v1";
+
+  function readHistorySnapshots() {
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function writeHistorySnapshots(snapshots) {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(snapshots.slice(0, 50)));
+  }
+
+  function buildCurrentHistorySnapshot() {
+    const state = window.ArtAmmoState || {};
+    const items = Array.isArray(state.unitItems) ? state.unitItems : [];
+    const grouped = state.groupedByUnit || {};
+    const threshold = getLowThreshold();
+
+    if (!items.length) return null;
+
+    const totalBalance = items.reduce((sum, item) => sum + asNumber(item.balance), 0);
+    const longRangeBalance = items
+      .filter(item => item.longRange)
+      .reduce((sum, item) => sum + asNumber(item.balance), 0);
+    const criticalCount = items.filter(item => asNumber(item.balance) <= threshold).length;
+    const zeroCount = items.filter(item => asNumber(item.balance) === 0).length;
+    const exchangeCount = Array.isArray(state.exchangeRecommendations)
+      ? state.exchangeRecommendations.length
+      : Array.isArray(state.actionLog)
+        ? state.actionLog.length
+        : 0;
+    const qualityCount = Array.isArray(state.dataQualityIssues)
+      ? state.dataQualityIssues.length
+      : Array.isArray(state.qualityIssues)
+        ? state.qualityIssues.length
+        : 0;
+
+    return {
+      id: `snapshot_${Date.now()}`,
+      app: "BASTION",
+      version: "v0.40",
+      createdAt: new Date().toISOString(),
+      sourceFileName: state.sourceFileName || document.getElementById("dashFileState")?.textContent || "unknown",
+      rows: items.length,
+      units: Object.keys(grouped).length,
+      totalBalance,
+      longRangeBalance,
+      criticalCount,
+      zeroCount,
+      exchangeCount,
+      qualityCount,
+      threshold,
+      filters: getReportFilterLabel()
+    };
+  }
+
+  function saveHistorySnapshot() {
+    const snapshot = buildCurrentHistorySnapshot();
+
+    if (!snapshot) {
+      alert("Спочатку завантаж Excel-файл і дочекайся аналізу.");
+      return;
+    }
+
+    const snapshots = readHistorySnapshots();
+    snapshots.unshift(snapshot);
+    writeHistorySnapshots(snapshots);
+    updateHistoryCenter();
+  }
+
+  function exportHistorySnapshots() {
+    const snapshots = readHistorySnapshots();
+
+    if (!snapshots.length) {
+      alert("Історія порожня. Спочатку збережи знімок.");
+      return;
+    }
+
+    const payload = {
+      app: "BASTION",
+      version: "v0.40",
+      exportedAt: new Date().toISOString(),
+      snapshots
+    };
+
+    const date = new Date().toISOString().slice(0, 10);
+    downloadTextFile(`bastion_history_${date}.json`, JSON.stringify(payload, null, 2));
+  }
+
+  function importHistorySnapshots(file) {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || "{}"));
+        const incoming = Array.isArray(parsed) ? parsed : Array.isArray(parsed.snapshots) ? parsed.snapshots : [];
+        if (!incoming.length) throw new Error("empty history");
+
+        const existing = readHistorySnapshots();
+        const byId = new Map(existing.map(item => [item.id, item]));
+        incoming.forEach(item => {
+          if (item && item.id) byId.set(item.id, item);
+        });
+
+        const merged = Array.from(byId.values())
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+        writeHistorySnapshots(merged);
+        updateHistoryCenter();
+      } catch (error) {
+        alert("Не вдалося імпортувати історію. Перевір JSON-файл.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function clearHistorySnapshots() {
+    if (!confirm("Очистити локальну історію BASTION?")) return;
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
+    updateHistoryCenter();
+  }
+
+  function updateHistoryCenter() {
+    const snapshots = readHistorySnapshots();
+    const latest = snapshots[0];
+    const previous = snapshots[1];
+
+    setText("historySnapshotCount", snapshots.length ? formatNumber(snapshots.length) : "—");
+    setText("historyLastFile", latest?.sourceFileName || "—");
+
+    if (latest && previous) {
+      const balanceDelta = asNumber(latest.totalBalance) - asNumber(previous.totalBalance);
+      const riskDelta = asNumber(latest.criticalCount) - asNumber(previous.criticalCount);
+      setText("historyBalanceDelta", `${balanceDelta > 0 ? "+" : ""}${formatNumber(balanceDelta)}`);
+      setText("historyRiskDelta", `${riskDelta > 0 ? "+" : ""}${formatNumber(riskDelta)}`);
+    } else {
+      setText("historyBalanceDelta", "—");
+      setText("historyRiskDelta", "—");
+    }
+
+    setText("historyTimelineStatus", snapshots.length ? `${formatNumber(snapshots.length)} знім.` : "очікується знімок");
+
+    setHTML("historyTimeline", snapshots.length ? snapshots.slice(0, 20).map((snapshot, index) => `
+      <div class="history-timeline-item ${index === 0 ? "is-latest" : ""}">
+        <div class="history-time-dot"></div>
+        <div class="history-card-body">
+          <div class="history-row-head">
+            <strong>${new Date(snapshot.createdAt).toLocaleString("uk-UA")}</strong>
+            <span>${snapshot.version || "v?"}</span>
+          </div>
+          <div class="history-file-name">${snapshot.sourceFileName || "unknown"}</div>
+          <div class="history-mini-grid">
+            <span>Рядків: <b>${formatNumber(snapshot.rows)}</b></span>
+            <span>Підрозділів: <b>${formatNumber(snapshot.units)}</b></span>
+            <span>Залишок: <b>${formatNumber(snapshot.totalBalance)}</b></span>
+            <span>Далекобійні: <b>${formatNumber(snapshot.longRangeBalance)}</b></span>
+            <span>Критично: <b>${formatNumber(snapshot.criticalCount)}</b></span>
+            <span>Обмін: <b>${formatNumber(snapshot.exchangeCount)}</b></span>
+          </div>
+        </div>
+      </div>
+    `).join("") : `<div class="alert-item muted">Збережи перший знімок після аналізу Excel.</div>`);
+
+    if (latest && previous) {
+      const rows = [
+        ["Залишок", latest.totalBalance, previous.totalBalance],
+        ["Далекобійні", latest.longRangeBalance, previous.longRangeBalance],
+        ["Критичні", latest.criticalCount, previous.criticalCount],
+        ["Нульові", latest.zeroCount, previous.zeroCount],
+        ["Рекомендації", latest.exchangeCount, previous.exchangeCount],
+        ["Проблеми якості", latest.qualityCount, previous.qualityCount]
+      ];
+
+      setHTML("historyComparePanel", rows.map(([label, current, prev]) => {
+        const delta = asNumber(current) - asNumber(prev);
+        return `<div class="history-compare-row ${delta > 0 ? "up" : delta < 0 ? "down" : "same"}">
+          <span>${label}</span>
+          <strong>${formatNumber(current)}</strong>
+          <em>${delta > 0 ? "+" : ""}${formatNumber(delta)}</em>
+        </div>`;
+      }).join(""));
+    } else {
+      setHTML("historyComparePanel", `<div class="alert-item muted">Для порівняння потрібно мінімум два знімки.</div>`);
+    }
+  }
+
+  function bindHistoryCenter() {
+    document.getElementById("saveHistorySnapshotBtn")?.addEventListener("click", saveHistorySnapshot);
+    document.getElementById("exportHistoryBtn")?.addEventListener("click", exportHistorySnapshots);
+    document.getElementById("clearHistoryBtn")?.addEventListener("click", clearHistorySnapshots);
+    document.getElementById("importHistoryFile")?.addEventListener("change", (event) => {
+      importHistorySnapshots(event.target.files?.[0]);
+      event.target.value = "";
+    });
   }
 
   function topUnitsByRisk(grouped, threshold) {
@@ -511,6 +713,8 @@
   }
 
   bindReportsCenter();
+  bindHistoryCenter();
+  updateHistoryCenter();
   setInterval(updateDashboardMetrics, 1500);
   updateDashboardMetrics();
 })();
