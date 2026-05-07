@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-  <title>Art Ammo</title>
+  <title>BASTION</title>
 
   <link rel="stylesheet" href="./styles/base.css">
   <link rel="stylesheet" href="./styles/layout.css">
@@ -17,154 +17,256 @@
 
   <script>
     window.ART_AMMO_APP_META = {
-      appName: "Art Ammo",
-      version: "0.29",
-      buildLabel: "v29-alias-editor",
+      appName: "BASTION",
+      version: "0.31",
+      buildLabel: "v31-bastion-command-ui",
       buildDate: "2026-05-07",
-      logicProfile: "Excel локально + аналітика залишків + журнал дій"
+      logicProfile: "Excel локально + аналітика залишків + журнал дій + BASTION UI shell"
     };
   </script>
 </head>
 
 <body>
-  <main class="app-container">
-    <section class="upload-card">
-      <div class="hero-row">
+  <main class="bastion-shell">
+    <aside class="bastion-sidebar">
+      <div class="brand-card">
+        <div class="brand-mark-wrap">
+          <img src="./assets/bastion-logo.svg" alt="BASTION" class="brand-mark">
+        </div>
         <div>
-          <h1>ART AMMO</h1>
-          <p class="subtitle">Система аналізу комплектів</p>
-        </div>
-        <div class="hero-meta">
-          <div class="status-pill" id="appStatus">Очікує Excel</div>
-          <div class="version-pill" id="appVersion">v0.29</div>
+          <div class="brand-title">BASTION</div>
+          <div class="brand-subtitle">ANALYTICS PLATFORM</div>
         </div>
       </div>
 
-      <div class="actions-row">
-        <label class="upload-button">
-          Завантажити Excel
-          <input type="file" id="excelFile" accept=".xlsx,.xls" hidden>
-        </label>
-
-        <button id="analyzeBtn" class="analyze-button" disabled>
-          Аналізувати файл
+      <div class="sidebar-section-label">Режими</div>
+      <nav class="mode-nav" aria-label="BASTION navigation">
+        <button class="mode-link active" type="button" data-mode="dashboard">
+          <span class="mode-icon">▣</span>
+          <span>Дашборд</span>
         </button>
-
-        <button id="exportExcelBtn" class="analyze-button" disabled>
-          Експорт Excel
+        <button class="mode-link" type="button" data-mode="analytics">
+          <span class="mode-icon">▤</span>
+          <span>Аналітика</span>
         </button>
-
-        <button id="exportPdfBtn" class="analyze-button" disabled>
-          PDF-звіт
+        <button class="mode-link" type="button" data-mode="exchange">
+          <span class="mode-icon">⇄</span>
+          <span>Обмін</span>
         </button>
-
-        <button id="exportDecisionPackageBtn" class="analyze-button" disabled>
-          Пакет рішення
+        <button class="mode-link" type="button" data-mode="dicts">
+          <span class="mode-icon">▧</span>
+          <span>Довідники</span>
         </button>
+        <button class="mode-link" type="button" data-mode="quality">
+          <span class="mode-icon">◇</span>
+          <span>Якість даних</span>
+        </button>
+        <button class="mode-link" type="button" data-mode="reports">
+          <span class="mode-icon">▨</span>
+          <span>Звіти</span>
+        </button>
+        <button class="mode-link" type="button" data-mode="settings">
+          <span class="mode-icon">⚙</span>
+          <span>Налаштування</span>
+        </button>
+      </nav>
 
-        <label class="analyze-button import-decision-label">
-          Імпорт пакета
-          <input type="file" id="importDecisionPackageFile" accept=".json,.zip,application/json,application/zip" hidden>
-        </label>
+      <div class="system-card">
+        <div class="system-title">Статус системи</div>
+        <div class="system-row"><span>Імпорт</span><b>LOCAL</b></div>
+        <div class="system-row"><span>Збереження</span><b>OFFLINE</b></div>
+        <div class="system-row"><span>Версія</span><b>v0.31</b></div>
       </div>
+    </aside>
 
-      <div id="fileInfo"></div>
+    <section class="bastion-main">
+      <header class="bastion-topbar">
+        <div>
+          <div class="top-kicker">Система активна</div>
+          <h1>BASTION</h1>
+        </div>
 
-      <div class="filters-panel" id="filtersPanel" hidden>
-        <select id="unitFilter" class="filter-control">
-          <option value="all">Всі підрозділи</option>
-        </select>
+        <nav class="top-tabs" aria-label="BASTION top modes">
+          <button class="top-tab active" type="button">Дашборд</button>
+          <button class="top-tab" type="button">Аналітика</button>
+          <button class="top-tab" type="button">Обмін</button>
+          <button class="top-tab" type="button">Довідники</button>
+          <button class="top-tab" type="button">Звіти</button>
+        </nav>
 
-        <label class="filter-check">
-          <input type="checkbox" id="longRangeOnly">
-          Тільки далекобійні
-        </label>
+        <div class="top-status">
+          <div class="live-dot"></div>
+          <span>LIVE</span>
+          <span class="sync-text">LOCAL XLSX</span>
+        </div>
+      </header>
 
-        <input
-          type="text"
-          id="searchFilter"
-          class="filter-control search-control"
-          placeholder="Пошук: снаряд, заряд, підрозділ..."
-        >
+      <section class="command-grid">
+        <section class="upload-card command-panel">
+          <div class="hero-row">
+            <div>
+              <div class="panel-kicker">BASTION CORE</div>
+              <h2>Операційна аналітика БК</h2>
+              <p class="subtitle">Локальний Excel → аналіз залишків → рекомендації → звіт</p>
+            </div>
+            <div class="hero-meta">
+              <div class="status-pill" id="appStatus">Очікує Excel</div>
+              <div class="version-pill" id="appVersion">v0.31</div>
+            </div>
+          </div>
 
-        <label class="threshold-control">
-          Малий залишок ≤
-          <input
-            type="number"
-            id="lowBalanceThreshold"
-            min="1"
-            max="9999"
-            step="1"
-            value="10"
-          >
-        </label>
+          <div class="actions-row command-actions">
+            <label class="upload-button">
+              Завантажити Excel
+              <input type="file" id="excelFile" accept=".xlsx,.xls" hidden>
+            </label>
 
-        <select id="stockFilter" class="filter-control">
-          <option value="all">Всі залишки</option>
-          <option value="problem">Тільки вузькі місця</option>
-          <option value="zero">Тільки нульові</option>
-          <option value="low">Тільки малий залишок</option>
-        </select>
+            <button id="analyzeBtn" class="analyze-button" disabled>
+              Аналізувати файл
+            </button>
 
-        <select id="sortFilter" class="filter-control">
-          <option value="default">Сортування: як у файлі</option>
-          <option value="balanceAsc">Залишок ↑</option>
-          <option value="balanceDesc">Залишок ↓</option>
-          <option value="rangeDesc">Дальність ↓</option>
-          <option value="rangeAsc">Дальність ↑</option>
-          <option value="unitAsc">Підрозділ А-Я</option>
-          <option value="projectileAsc">Снаряд А-Я</option>
-        </select>
+            <button id="exportExcelBtn" class="analyze-button" disabled>
+              Експорт Excel
+            </button>
 
-        <select id="actionPriorityFilter" class="filter-control">
-          <option value="all">Журнал дій: всі пріоритети</option>
-          <option value="I">Пріоритет I</option>
-          <option value="II">Пріоритет II</option>
-          <option value="III">Пріоритет III</option>
-        </select>
+            <button id="exportPdfBtn" class="analyze-button" disabled>
+              PDF-звіт
+            </button>
 
-        <label class="filter-check action-check">
-          <input type="checkbox" id="actionLongOnly">
-          Дії: тільки далекобійні
-        </label>
+            <button id="exportDecisionPackageBtn" class="analyze-button" disabled>
+              Пакет рішення
+            </button>
 
-        <select id="actionStatusFilter" class="filter-control">
-          <option value="all">Статус дій: всі</option>
-          <option value="planned">Заплановано</option>
-          <option value="done">Виконано</option>
-          <option value="rejected">Відхилено</option>
-        </select>
+            <label class="analyze-button import-decision-label">
+              Імпорт пакета
+              <input type="file" id="importDecisionPackageFile" accept=".json,.zip,application/json,application/zip" hidden>
+            </label>
+          </div>
 
-        <button id="exportStatusesBtn" class="analyze-button small-button" disabled>
-          Експорт статусів
-        </button>
+          <div id="fileInfo"></div>
 
-        <label class="analyze-button small-button import-status-label">
-          Імпорт статусів
-          <input type="file" id="importStatusesFile" accept=".json" hidden>
-        </label>
+          <div class="filters-panel" id="filtersPanel" hidden>
+            <select id="unitFilter" class="filter-control">
+              <option value="all">Всі підрозділи</option>
+            </select>
 
-        <button id="exportAliasDictionaryBtn" class="analyze-button small-button" disabled>
-          Експорт словника
-        </button>
+            <label class="filter-check">
+              <input type="checkbox" id="longRangeOnly">
+              Тільки далекобійні
+            </label>
 
-        <label class="analyze-button small-button import-status-label">
-          Імпорт словника
-          <input type="file" id="importAliasDictionaryFile" accept=".json" hidden>
-        </label>
+            <input
+              type="text"
+              id="searchFilter"
+              class="filter-control search-control"
+              placeholder="Пошук: снаряд, заряд, підрозділ..."
+            >
 
-        <button id="resetAliasDictionaryBtn" class="analyze-button small-button" disabled>
-          Очистити словник
-        </button>
+            <label class="threshold-control">
+              Малий залишок ≤
+              <input
+                type="number"
+                id="lowBalanceThreshold"
+                min="1"
+                max="9999"
+                step="1"
+                value="10"
+              >
+            </label>
 
-        <button id="resetFiltersBtn" class="analyze-button small-button">
-          Скинути фільтри
-        </button>
-      </div>
+            <select id="stockFilter" class="filter-control">
+              <option value="all">Всі залишки</option>
+              <option value="problem">Тільки вузькі місця</option>
+              <option value="zero">Тільки нульові</option>
+              <option value="low">Тільки малий залишок</option>
+            </select>
 
-      <div id="filterStatus" class="filter-status" hidden></div>
-      <div id="sheetList"></div>
-      <div id="analysisPanel"></div>
+            <select id="sortFilter" class="filter-control">
+              <option value="default">Сортування: як у файлі</option>
+              <option value="balanceAsc">Залишок ↑</option>
+              <option value="balanceDesc">Залишок ↓</option>
+              <option value="rangeDesc">Дальність ↓</option>
+              <option value="rangeAsc">Дальність ↑</option>
+              <option value="unitAsc">Підрозділ А-Я</option>
+              <option value="projectileAsc">Снаряд А-Я</option>
+            </select>
+
+            <select id="actionPriorityFilter" class="filter-control">
+              <option value="all">Журнал дій: всі пріоритети</option>
+              <option value="I">Пріоритет I</option>
+              <option value="II">Пріоритет II</option>
+              <option value="III">Пріоритет III</option>
+            </select>
+
+            <label class="filter-check action-check">
+              <input type="checkbox" id="actionLongOnly">
+              Дії: тільки далекобійні
+            </label>
+
+            <select id="actionStatusFilter" class="filter-control">
+              <option value="all">Статус дій: всі</option>
+              <option value="planned">Заплановано</option>
+              <option value="done">Виконано</option>
+              <option value="rejected">Відхилено</option>
+            </select>
+
+            <button id="exportStatusesBtn" class="analyze-button small-button" disabled>
+              Експорт статусів
+            </button>
+
+            <label class="analyze-button small-button import-status-label">
+              Імпорт статусів
+              <input type="file" id="importStatusesFile" accept=".json" hidden>
+            </label>
+
+            <button id="exportAliasDictionaryBtn" class="analyze-button small-button" disabled>
+              Експорт словника
+            </button>
+
+            <label class="analyze-button small-button import-status-label">
+              Імпорт словника
+              <input type="file" id="importAliasDictionaryFile" accept=".json" hidden>
+            </label>
+
+            <button id="resetAliasDictionaryBtn" class="analyze-button small-button" disabled>
+              Очистити словник
+            </button>
+
+            <button id="resetFiltersBtn" class="analyze-button small-button">
+              Скинути фільтри
+            </button>
+          </div>
+
+          <div id="filterStatus" class="filter-status" hidden></div>
+          <div id="sheetList"></div>
+          <div id="analysisPanel"></div>
+        </section>
+
+        <aside class="context-panel">
+          <div class="context-card accent-red">
+            <div class="context-label">Режим</div>
+            <div class="context-value">Command</div>
+            <div class="context-note">Локальна обробка без хмари</div>
+          </div>
+
+          <div class="context-card">
+            <div class="context-label">Поточний етап</div>
+            <div class="context-value small">BASTION UI</div>
+            <div class="context-note">Візуальна архітектура v1</div>
+          </div>
+
+          <div class="context-card">
+            <div class="context-label">Модулі</div>
+            <ul class="context-list">
+              <li>Аналітика залишків</li>
+              <li>Обмін між підрозділами</li>
+              <li>Довідники назв</li>
+              <li>Пакет рішення</li>
+              <li>Контроль якості</li>
+            </ul>
+          </div>
+        </aside>
+      </section>
     </section>
   </main>
 
