@@ -22,6 +22,12 @@
     const groupedRanges = typeof groupByRangeBand === "function"
       ? groupByRangeBand(items)
       : {};
+    const criticalItems = typeof getCriticalItems === "function"
+      ? getCriticalItems(items)
+      : items.filter(item => Number(item.balance || 0) === 0);
+    const lowBalanceItems = typeof getLowBalanceItems === "function"
+      ? getLowBalanceItems(items, 10)
+      : items.filter(item => Number(item.balance || 0) > 0 && Number(item.balance || 0) <= 10);
 
     const workbook = XLSX.utils.book_new();
 
@@ -66,6 +72,24 @@
       workbook,
       XLSX.utils.json_to_sheet(rangeRows),
       "Дальності"
+    );
+
+    const bottleneckRows = [...criticalItems, ...lowBalanceItems].map(item => ({
+      "Статус": Number(item.balance || 0) === 0 ? "Нуль" : "Мало",
+      "Підрозділ": item.unit,
+      "Рядок": item.row,
+      "Категорія": item.category,
+      "Снаряд": item.projectile,
+      "Заряд": item.charge,
+      "Дальність, км": item.rangeKm ? item.rangeKm.toFixed(1) : "",
+      "Далекобійна": item.longRange ? "Так" : "Ні",
+      "Залишок": item.balance
+    }));
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(bottleneckRows),
+      "Вузькі місця"
     );
 
     const detailRows = items.map(item => ({

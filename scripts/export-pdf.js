@@ -17,6 +17,12 @@
     const grouped = groupByUnit(items);
     const groupedCategories = typeof groupByCategory === "function" ? groupByCategory(items) : {};
     const groupedRanges = typeof groupByRangeBand === "function" ? groupByRangeBand(items) : {};
+    const criticalItems = typeof getCriticalItems === "function"
+      ? getCriticalItems(items)
+      : items.filter(item => Number(item.balance || 0) === 0);
+    const lowBalanceItems = typeof getLowBalanceItems === "function"
+      ? getLowBalanceItems(items, 10)
+      : items.filter(item => Number(item.balance || 0) > 0 && Number(item.balance || 0) <= 10);
 
     const totalBalance = items.reduce((sum, item) => sum + Number(item.balance || 0), 0);
     const totalReceived = items.reduce((sum, item) => sum + Number(item.received || 0), 0);
@@ -93,6 +99,34 @@
       ]);
     });
 
+    const bottleneckBody = [
+      [
+        { text: "Статус", bold: true },
+        { text: "Підрозділ", bold: true },
+        { text: "Снаряд", bold: true },
+        { text: "Заряд", bold: true },
+        { text: "Дальність, км", bold: true },
+        { text: "Далекобійна", bold: true },
+        { text: "Залишок", bold: true }
+      ]
+    ];
+
+    [...criticalItems, ...lowBalanceItems].slice(0, 80).forEach(item => {
+      bottleneckBody.push([
+        Number(item.balance || 0) === 0 ? "Нуль" : "Мало",
+        item.unit,
+        item.projectile,
+        item.charge,
+        item.rangeKm ? item.rangeKm.toFixed(1) : "",
+        item.longRange ? "Так" : "Ні",
+        String(item.balance)
+      ]);
+    });
+
+    if (bottleneckBody.length === 1) {
+      bottleneckBody.push(["—", "Критичних позицій не знайдено", "", "", "", "", ""]);
+    }
+
     const detailsBody = [
       [
         { text: "Підрозділ", bold: true },
@@ -134,7 +168,9 @@
             { text: `Витрата: ${totalSpent}`, style: "metric" },
             { text: `Залишок: ${totalBalance}`, style: "metric" },
             { text: `Далекобійних: ${longRangeBalance}`, style: "metric" },
-            { text: `Недалекобійних: ${shortRangeBalance}`, style: "metric" }
+            { text: `Недалекобійних: ${shortRangeBalance}`, style: "metric" },
+            { text: `Нульових: ${criticalItems.length}`, style: "metric" },
+            { text: `Малий залишок: ${lowBalanceItems.length}`, style: "metric" }
           ],
           margin: [0, 0, 0, 16]
         },
@@ -164,6 +200,16 @@
             headerRows: 1,
             widths: ["*", "auto", "auto", "auto"],
             body: rangeBody
+          },
+          layout: "lightHorizontalLines",
+          margin: [0, 0, 0, 14]
+        },
+        { text: "Вузькі місця", style: "section" },
+        {
+          table: {
+            headerRows: 1,
+            widths: ["auto", "*", "*", "*", "auto", "auto", "auto"],
+            body: bottleneckBody
           },
           layout: "lightHorizontalLines",
           margin: [0, 0, 0, 14]

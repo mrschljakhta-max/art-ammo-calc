@@ -266,6 +266,30 @@ function groupByRangeBand(items) {
   );
 }
 
+function getCriticalItems(items) {
+  return [...items]
+    .filter(item => Number(item.balance || 0) === 0)
+    .sort(sortCriticalItems);
+}
+
+function getLowBalanceItems(items, threshold = 10) {
+  return [...items]
+    .filter(item => Number(item.balance || 0) > 0 && Number(item.balance || 0) <= threshold)
+    .sort(sortCriticalItems);
+}
+
+function sortCriticalItems(a, b) {
+  const aLong = a.longRange ? 0 : 1;
+  const bLong = b.longRange ? 0 : 1;
+
+  if (aLong !== bLong) return aLong - bLong;
+
+  const balanceDiff = Number(a.balance || 0) - Number(b.balance || 0);
+  if (balanceDiff !== 0) return balanceDiff;
+
+  return String(a.unit).localeCompare(String(b.unit), "uk");
+}
+
 function setupFilters(grouped) {
   const previousUnit = unitFilter.value || "all";
 
@@ -362,6 +386,8 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const unitCount = Object.keys(grouped).length;
   const groupedByCategory = groupByCategory(unitItems);
   const groupedByRangeBand = groupByRangeBand(unitItems);
+  const criticalItems = getCriticalItems(unitItems);
+  const lowBalanceItems = getLowBalanceItems(unitItems, 10);
 
   let html = `
     <div class="analysis-grid">
@@ -384,6 +410,14 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
       <div class="metric-card">
         <div class="metric-label">Недалекобійних</div>
         <div class="metric-value">${unitShortRangeBalance}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Нульових позицій</div>
+        <div class="metric-value">${criticalItems.length}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Малий залишок ≤10</div>
+        <div class="metric-value">${lowBalanceItems.length}</div>
       </div>
     </div>
   `;
@@ -506,6 +540,56 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
       </tr>
     `;
   });
+
+  html += `
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-panel analysis-table">
+      <h2>Вузькі місця</h2>
+      <div class="table-wrap compact-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Статус</th>
+              <th>Підрозділ</th>
+              <th>Категорія</th>
+              <th>Снаряд</th>
+              <th>Заряд</th>
+              <th>Дальність, км</th>
+              <th>Далекобійна</th>
+              <th>Залишок</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+
+  [...criticalItems, ...lowBalanceItems].slice(0, 80).forEach((item) => {
+    const status = Number(item.balance || 0) === 0 ? "Нуль" : "Мало";
+
+    html += `
+      <tr>
+        <td>${status}</td>
+        <td>${escapeHtml(item.unit)}</td>
+        <td>${escapeHtml(item.category)}</td>
+        <td>${escapeHtml(item.projectile)}</td>
+        <td>${escapeHtml(item.charge)}</td>
+        <td>${item.rangeKm ? item.rangeKm.toFixed(1) : ""}</td>
+        <td>${item.longRange ? "Так" : "Ні"}</td>
+        <td>${item.balance}</td>
+      </tr>
+    `;
+  });
+
+  if (![...criticalItems, ...lowBalanceItems].length) {
+    html += `
+      <tr>
+        <td colspan="8">Критичних позицій за поточними фільтрами не знайдено.</td>
+      </tr>
+    `;
+  }
 
   html += `
           </tbody>
