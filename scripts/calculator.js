@@ -672,8 +672,8 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     const status = Number(item.balance || 0) === 0 ? "Нуль" : "Мало";
 
     html += `
-      <tr>
-        <td>${status}</td>
+      <tr class="${getRowClass(item)}">
+        <td><span class="status-badge ${Number(item.balance || 0) === 0 ? "status-zero" : "status-low"}">${status}</span></td>
         <td>${escapeHtml(item.unit)}</td>
         <td>${escapeHtml(item.category)}</td>
         <td>${escapeHtml(item.projectile)}</td>
@@ -724,7 +724,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
 
   unitItems.forEach((item) => {
     html += `
-      <tr>
+      <tr class="${getRowClass(item)}">
         <td>${escapeHtml(item.unit)}</td>
         <td>${item.row}</td>
         <td>${escapeHtml(item.category)}</td>
@@ -751,6 +751,16 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   analysisPanel.innerHTML = html;
 }
 
+function getRowClass(item) {
+  const balance = Number(item?.balance || 0);
+  const threshold = getLowBalanceThreshold();
+
+  if (balance === 0) return "row-zero";
+  if (balance > 0 && balance <= threshold) return "row-low";
+  if (item?.longRange) return "row-long";
+
+  return "row-normal";
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
