@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.38</div>
+      <div class="core-version">BASTION CORE v0.39</div>
     </aside>
 
     <main class="bastion-main">
@@ -357,6 +357,38 @@
             <div class="preview-card"><strong>Звірка</strong><p>Підрозділи проти зведеного аркуша.</p><span id="qualityCheckPreview" class="mini-value">—</span></div>
           </div>
           <div id="qualityLiveList" class="mode-live-list"></div>
+
+          <div class="quality-center-grid">
+            <section class="quality-panel">
+              <div class="quality-panel-head">
+                <h3>Розподіл проблем</h3>
+                <span id="qualityTotalBadge">—</span>
+              </div>
+              <div id="qualityBreakdownList" class="quality-breakdown-list">
+                <div class="alert-item muted">Після аналізу тут з’явиться структура помилок Excel.</div>
+              </div>
+            </section>
+
+            <section class="quality-panel">
+              <div class="quality-panel-head">
+                <h3>Контроль звірки</h3>
+                <span id="qualityReconcileBadge">—</span>
+              </div>
+              <div id="qualityReconcileList" class="quality-breakdown-list">
+                <div class="alert-item muted">Система порівняє підрозділи зі зведеним аркушем.</div>
+              </div>
+            </section>
+          </div>
+
+          <div class="quality-table-shell">
+            <div class="quality-panel-head">
+              <h3>Журнал проблем якості</h3>
+              <span id="qualityIssueCount">—</span>
+            </div>
+            <div id="qualityIssueTable" class="quality-issue-table">
+              <div class="alert-item muted">Завантаж Excel-файл для формування журналу якості.</div>
+            </div>
+          </div>
         </section>
       </section>
 
