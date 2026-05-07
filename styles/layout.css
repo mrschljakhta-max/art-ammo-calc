@@ -88,3 +88,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+.view-panel {
+  display: none;
+  margin-top: 16px;
+}
+
+.view-panel.is-active {
+  display: block;
+}
+
+.analytics-layout {
+  grid-template-columns: 320px minmax(0, 1fr);
+}
