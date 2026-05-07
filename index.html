@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.34</div>
+      <div class="core-version">BASTION CORE v0.35</div>
     </aside>
 
     <main class="bastion-main">
@@ -180,6 +180,47 @@
                 <div class="ops-row"><span>Рекомендацій обміну</span><strong id="dashExchangeCount">—</strong></div>
                 <div class="ops-row"><span>Проблем якості</span><strong id="dashQualityIssues">—</strong></div>
                 <div class="ops-row"><span>Статус</span><strong id="dashReadinessState">очікує файл</strong></div>
+              </div>
+            </div>
+
+            <div class="tactical-overview">
+              <div class="tactical-map-card">
+                <div class="map-head">
+                  <div>
+                    <div class="map-title">Оперативна схема залишків</div>
+                    <div class="map-subtitle">локальна симуляція на основі завантаженого Excel</div>
+                  </div>
+                  <div class="map-date" id="dashMapMode">STANDBY</div>
+                </div>
+
+                <div class="tactical-map-visual" aria-label="Tactical readiness map">
+                  <div class="grid-layer"></div>
+                  <div class="range-ring ring-a"></div>
+                  <div class="range-ring ring-b"></div>
+                  <div class="range-ring ring-c"></div>
+                  <div class="front-line"></div>
+                  <div class="node node-red n1"></div>
+                  <div class="node node-green n2"></div>
+                  <div class="node node-red n3"></div>
+                  <div class="node node-amber n4"></div>
+                  <div class="node node-blue n5"></div>
+                  <div class="map-label label-a">CRITICAL</div>
+                  <div class="map-label label-b">LONG RANGE</div>
+                  <div class="map-label label-c">SUPPLY GRID</div>
+                </div>
+              </div>
+
+              <div class="readiness-card">
+                <div class="ops-title">Індекс готовності</div>
+                <div class="readiness-gauge">
+                  <div class="readiness-ring" id="dashReadinessRing" style="--value:0"></div>
+                  <div class="readiness-center">
+                    <strong id="dashReadinessPercent">—</strong>
+                    <span>готовність</span>
+                  </div>
+                </div>
+                <div class="ops-row"><span>Найбільший залишок</span><strong id="dashTopUnit">—</strong></div>
+                <div class="ops-row"><span>Критичний фокус</span><strong id="dashCriticalFocus">—</strong></div>
               </div>
             </div>
           </section>
