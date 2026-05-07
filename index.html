@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <div class="core-version">BASTION CORE v0.40</div>
+      <div class="core-version">BASTION CORE v0.41</div>
     </aside>
 
     <main class="bastion-main">
@@ -585,14 +585,132 @@
       </section>
 
       <section class="view-panel" data-view-panel="settings">
-        <section class="command-panel primary-panel mode-placeholder">
+        <section class="command-panel primary-panel settings-hero">
           <div class="panel-header compact-header">
             <div>
-              <h2>Налаштування</h2>
-              <p>Пороги, схема Excel, ролі, профілі логіки та параметри експорту.</p>
+              <h2>Налаштування BASTION</h2>
+              <p>Пороги аналізу, профіль логіки, параметри експорту та локальні налаштування робочого місця.</p>
             </div>
             <div class="panel-badge">SETTINGS</div>
           </div>
+
+          <div class="settings-status-grid">
+            <div class="settings-status-card">
+              <span>Профіль логіки</span>
+              <strong id="settingsLogicProfileState">—</strong>
+            </div>
+            <div class="settings-status-card">
+              <span>Поріг малого залишку</span>
+              <strong id="settingsLowStockState">—</strong>
+            </div>
+            <div class="settings-status-card">
+              <span>Поріг далекобійності</span>
+              <strong id="settingsLongRangeState">—</strong>
+            </div>
+            <div class="settings-status-card">
+              <span>Стартовий режим</span>
+              <strong id="settingsDefaultViewState">—</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-grid">
+          <section class="command-panel settings-panel">
+            <div class="quality-panel-head">
+              <h3>Аналітичні пороги</h3>
+              <span>runtime rules</span>
+            </div>
+
+            <div class="settings-form-grid">
+              <label class="settings-field">
+                <span>Малий залишок ≤</span>
+                <input id="settingsLowStockThreshold" type="number" min="0" step="1" value="10">
+              </label>
+
+              <label class="settings-field">
+                <span>Далекобійна від, км</span>
+                <input id="settingsLongRangeKm" type="number" min="0" step="0.1" value="18">
+              </label>
+
+              <label class="settings-field">
+                <span>Стартовий режим</span>
+                <select id="settingsDefaultView">
+                  <option value="dashboard">Dashboard</option>
+                  <option value="imports">Imports</option>
+                  <option value="analytics">Analytics</option>
+                  <option value="reports">Reports</option>
+                </select>
+              </label>
+
+              <label class="settings-field">
+                <span>Профіль логіки</span>
+                <select id="settingsLogicProfile">
+                  <option value="balanced">Balanced</option>
+                  <option value="strict">Strict control</option>
+                  <option value="field">Field mode</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="command-panel settings-panel">
+            <div class="quality-panel-head">
+              <h3>Імпорт і поведінка</h3>
+              <span>operator workflow</span>
+            </div>
+
+            <div class="settings-toggle-list">
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsAutoAnalyze" checked>
+                <span>Автоаналіз після завантаження Excel</span>
+              </label>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsAutoOpenAnalytics" checked>
+                <span>Після імпорту переходити в Analytics</span>
+              </label>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsShowQualityOnDashboard" checked>
+                <span>Показувати проблеми якості в Dashboard</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="command-panel settings-panel">
+            <div class="quality-panel-head">
+              <h3>Експорт</h3>
+              <span>reports / packages</span>
+            </div>
+
+            <div class="settings-form-grid">
+              <label class="settings-field wide">
+                <span>Префікс файлів експорту</span>
+                <input id="settingsExportPrefix" type="text" value="bastion">
+              </label>
+              <label class="settings-field wide">
+                <span>Маркер звіту</span>
+                <input id="settingsReportMarker" type="text" value="BASTION REPORT">
+              </label>
+            </div>
+          </section>
+
+          <section class="command-panel settings-panel">
+            <div class="quality-panel-head">
+              <h3>Керування налаштуваннями</h3>
+              <span>local storage</span>
+            </div>
+
+            <div class="settings-actions">
+              <button id="settingsSaveBtn" class="context-action">Зберегти</button>
+              <button id="settingsResetBtn" class="context-action ghost">Скинути</button>
+              <button id="settingsExportBtn" class="context-action ghost">Експорт JSON</button>
+              <label class="context-action ghost settings-import-label">
+                Імпорт JSON
+                <input id="settingsImportFile" type="file" accept="application/json,.json" hidden>
+              </label>
+            </div>
+
+            <div id="settingsMessage" class="settings-message">Налаштування зберігаються локально в браузері.</div>
+          </section>
         </section>
       </section>
     </main>
