@@ -1202,6 +1202,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
     ${renderReportPassport(reportPassport)}
     ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderExchangeRecommendations(getExchangeRecommendations(window.ArtAmmoState?.unitItems || unitItems, getLowBalanceThreshold(), 12))}
+    ${renderExchangeImpact(getExchangeRecommendations(window.ArtAmmoState?.unitItems || unitItems, getLowBalanceThreshold(), 12))}
     ${renderRecommendations(recommendations)}
     ${renderCommanderSummary(commanderSummary)}
   `;
@@ -1560,6 +1561,90 @@ function renderExchangeRecommendations(recommendations) {
             `).join("")}
           </tbody>
         </table>
+      </div>
+    </div>
+  `;
+}
+
+function getExchangeImpactSummary(recommendations) {
+  const threshold = getLowBalanceThreshold();
+  const recs = Array.isArray(recommendations) ? recommendations : [];
+
+  const totalRecommended = recs.reduce((sum, item) => sum + Number(item.recommendedQty || 0), 0);
+  const longRangeRecommended = recs
+    .filter(item => item.longRange)
+    .reduce((sum, item) => sum + Number(item.recommendedQty || 0), 0);
+
+  const zeroClosed = recs.filter(item =>
+    Number(item.receiverBalance || 0) === 0 && Number(item.expectedReceiverBalance || 0) > 0
+  ).length;
+
+  const raisedAboveThreshold = recs.filter(item =>
+    Number(item.receiverBalance || 0) <= threshold &&
+    Number(item.expectedReceiverBalance || 0) > threshold
+  ).length;
+
+  const donorWarnings = recs.filter(item =>
+    Number(item.donorBalance || 0) - Number(item.recommendedQty || 0) <= threshold
+  ).length;
+
+  return {
+    count: recs.length,
+    totalRecommended,
+    longRangeRecommended,
+    zeroClosed,
+    raisedAboveThreshold,
+    donorWarnings,
+    threshold
+  };
+}
+
+function renderExchangeImpact(recommendations) {
+  if (!recommendations || !recommendations.length) return "";
+
+  const impact = getExchangeImpactSummary(recommendations);
+
+  return `
+    <div class="exchange-impact-panel">
+      <div class="exchange-impact-header">
+        <h2>Очікуваний ефект обміну</h2>
+        <span>Оцінка після виконання рекомендованих передач</span>
+      </div>
+
+      <div class="exchange-impact-grid">
+        <div class="exchange-impact-card">
+          <div class="impact-label">Рекомендацій</div>
+          <div class="impact-value">${impact.count}</div>
+        </div>
+
+        <div class="exchange-impact-card">
+          <div class="impact-label">Передати загалом</div>
+          <div class="impact-value">${impact.totalRecommended}</div>
+        </div>
+
+        <div class="exchange-impact-card">
+          <div class="impact-label">Далекобійних у передачі</div>
+          <div class="impact-value">${impact.longRangeRecommended}</div>
+        </div>
+
+        <div class="exchange-impact-card">
+          <div class="impact-label">Закрито нульових</div>
+          <div class="impact-value">${impact.zeroClosed}</div>
+        </div>
+
+        <div class="exchange-impact-card">
+          <div class="impact-label">Піднято вище порогу</div>
+          <div class="impact-value">${impact.raisedAboveThreshold}</div>
+        </div>
+
+        <div class="exchange-impact-card ${impact.donorWarnings ? "impact-warning" : ""}">
+          <div class="impact-label">Донорів біля порогу</div>
+          <div class="impact-value">${impact.donorWarnings}</div>
+        </div>
+      </div>
+
+      <div class="exchange-impact-note">
+        Поріг малого залишку: ≤${impact.threshold}. Розрахунок є попереднім і не враховує фізичну доступність, час переміщення та рішення відповідальних осіб.
       </div>
     </div>
   `;

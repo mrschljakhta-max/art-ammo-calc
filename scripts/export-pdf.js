@@ -127,9 +127,34 @@
             ]
           },
           layout: "lightHorizontalLines",
-          margin: [0, 0, 0, 18]
+          margin: [0, 0, 0, 12]
         }
       );
+
+      if (typeof getExchangeImpactSummary === "function") {
+        const impact = getExchangeImpactSummary(exchangeRecommendations);
+        content.push(
+          { text: "Очікуваний ефект обміну", style: "section" },
+          {
+            table: {
+              headerRows: 1,
+              widths: ["*", "auto"],
+              body: [
+                [{ text: "Показник", bold: true }, { text: "Значення", bold: true }],
+                ["Кількість рекомендацій", String(impact.count)],
+                ["Рекомендовано передати загалом", String(impact.totalRecommended)],
+                ["Далекобійних у передачі", String(impact.longRangeRecommended)],
+                ["Закрито нульових позицій", String(impact.zeroClosed)],
+                ["Піднято вище порогу", String(impact.raisedAboveThreshold)],
+                ["Донорів біля порогу після передачі", String(impact.donorWarnings)],
+                ["Поріг малого залишку", `≤${impact.threshold}`]
+              ]
+            },
+            layout: "lightHorizontalLines",
+            margin: [0, 0, 0, 18]
+          }
+        );
+      }
     }
 
     const unitSummaryBody = [

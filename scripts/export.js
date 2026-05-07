@@ -68,6 +68,22 @@
 
       const exchangeSheet = XLSX.utils.json_to_sheet(exchangeRows);
       XLSX.utils.book_append_sheet(workbook, exchangeSheet, "Рекомендації обміну");
+
+      if (typeof getExchangeImpactSummary === "function") {
+        const impact = getExchangeImpactSummary(exchangeRecommendations);
+        const impactRows = [
+          { "Показник": "Кількість рекомендацій", "Значення": impact.count },
+          { "Показник": "Рекомендовано передати загалом", "Значення": impact.totalRecommended },
+          { "Показник": "Далекобійних у передачі", "Значення": impact.longRangeRecommended },
+          { "Показник": "Закрито нульових позицій", "Значення": impact.zeroClosed },
+          { "Показник": "Піднято вище порогу", "Значення": impact.raisedAboveThreshold },
+          { "Показник": "Донорів біля порогу після передачі", "Значення": impact.donorWarnings },
+          { "Показник": "Поріг малого залишку", "Значення": `≤${impact.threshold}` }
+        ];
+
+        const impactSheet = XLSX.utils.json_to_sheet(impactRows);
+        XLSX.utils.book_append_sheet(workbook, impactSheet, "Ефект обміну");
+      }
     }
 
     const summaryRows = Object.values(grouped).map(unit => ({
