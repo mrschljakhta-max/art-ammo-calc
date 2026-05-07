@@ -89,6 +89,15 @@
         ? state.qualityIssues.length
         : 0;
 
+    const unitValues = Object.values(grouped);
+    const topUnit = unitValues
+      .slice()
+      .sort((a, b) => asNumber(b.totalBalance) - asNumber(a.totalBalance))[0];
+
+    const readinessPercent = items.length
+      ? Math.max(0, Math.min(100, Math.round(100 - (critical / items.length) * 100)))
+      : null;
+
     setText("dashTotalBalance", items.length ? formatNumber(totalBalance) : "—");
     setText("dashLongRange", items.length ? formatNumber(longRange) : "—");
     setText("dashCriticalCount", items.length ? formatNumber(critical) : "—");
@@ -96,6 +105,13 @@
     setText("dashRowsCount", items.length ? formatNumber(items.length) : "—");
     setText("dashExchangeCount", items.length ? formatNumber(exchangeCount) : "—");
     setText("dashQualityIssues", items.length ? formatNumber(qualityIssues) : "—");
+    setText("dashTopUnit", topUnit ? `${topUnit.unit} / ${formatNumber(topUnit.totalBalance)}` : "—");
+    setText("dashCriticalFocus", items.length ? `${formatNumber(critical)} позицій ≤ ${threshold}` : "—");
+    setText("dashReadinessPercent", readinessPercent === null ? "—" : `${readinessPercent}%`);
+    setText("dashMapMode", items.length ? "LIVE DATA" : "STANDBY");
+
+    const ring = document.getElementById("dashReadinessRing");
+    if (ring) ring.style.setProperty("--value", readinessPercent === null ? 0 : readinessPercent);
 
     if (state.reportPassport?.analysisAt) {
       setText("dashLastAnalysis", new Date(state.reportPassport.analysisAt).toLocaleString("uk-UA"));
