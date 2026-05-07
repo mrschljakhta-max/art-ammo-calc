@@ -21,6 +21,24 @@ function handleExcel(event) {
 
   fileInfo.innerHTML = `<p>Файл: ${file.name}</p>`;
 
+  sheetList.innerHTML = "";
+
+  const analysisPanel = document.getElementById("analysisPanel");
+  if (analysisPanel) analysisPanel.innerHTML = "";
+
+  document.getElementById("analyzeBtn").disabled = true;
+  document.getElementById("exportExcelBtn").disabled = true;
+  document.getElementById("exportPdfBtn").disabled = true;
+
+  const filtersPanel = document.getElementById("filtersPanel");
+  if (filtersPanel) filtersPanel.hidden = true;
+
+  window.ArtAmmoState.workbook = null;
+  window.ArtAmmoState.analysisItems = [];
+  window.ArtAmmoState.unitItems = [];
+  window.ArtAmmoState.summaryItems = [];
+  window.ArtAmmoState.groupedByUnit = {};
+
   const reader = new FileReader();
 
   reader.onload = function (e) {
