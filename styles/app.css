@@ -1,66 +1,114 @@
 .upload-card {
-  width: 700px;
-
+  width: min(1280px, 96vw);
   background: #1b1f2b;
-
   border-radius: 24px;
-
-  padding: 40px;
-
+  padding: 36px;
   border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 0 40px rgba(0,0,0,0.5);
+}
 
-  box-shadow:
-    0 0 40px rgba(0,0,0,0.5);
+.hero-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 26px;
 }
 
 h1 {
   font-size: 42px;
   margin-bottom: 10px;
+  letter-spacing: 0.05em;
 }
 
 .subtitle {
   opacity: 0.7;
-  margin-bottom: 30px;
+}
+
+.status-pill {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.78);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.status-pill[data-type="ok"] {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.32);
+}
+
+.status-pill[data-type="error"] {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.32);
+}
+
+.actions-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.upload-button,
+.analyze-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 14px 22px;
+  border: 0;
+  border-radius: 14px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
 }
 
 .upload-button {
-  display: inline-flex;
-
-  padding: 16px 28px;
-
   background: #5865f2;
-
-  border-radius: 14px;
-
-  cursor: pointer;
-
-  transition: 0.2s;
 }
 
-.upload-button:hover {
+.analyze-button {
+  background: rgba(255,255,255,0.08);
+}
+
+.small-button {
+  min-height: 46px;
+  padding: 13px 18px;
+}
+
+.upload-button:hover,
+.analyze-button:not(:disabled):hover {
   transform: translateY(-2px);
+  background: rgba(88, 101, 242, 0.8);
+}
+
+.analyze-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 #fileInfo {
-  margin-top: 25px;
+  margin-top: 22px;
+  color: rgba(255,255,255,0.76);
 }
 
 #sheetList {
-  margin-top: 25px;
-
+  margin-top: 22px;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .sheet-item {
-  padding: 14px;
-
+  padding: 12px 14px;
   border-radius: 12px;
-
+  border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.05);
-}
-.sheet-item {
+  color: white;
   cursor: pointer;
 }
 
@@ -68,26 +116,103 @@ h1 {
   background: rgba(88, 101, 242, 0.22);
 }
 
+.filters-panel {
+  margin-top: 24px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-control {
+  min-height: 46px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  outline: none;
+}
+
+.filter-control option {
+  background: #1b1f2b;
+  color: white;
+}
+
+.filter-check {
+  min-height: 46px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  cursor: pointer;
+}
+
+.search-control {
+  min-width: 320px;
+  flex: 1;
+}
+
+.filter-status {
+  margin-top: 12px;
+  opacity: 0.72;
+  font-size: 13px;
+}
+
+#analysisPanel {
+  margin-top: 28px;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.metric-card {
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.metric-label {
+  opacity: 0.65;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.metric-value {
+  font-size: 28px;
+  font-weight: 800;
+}
+
 .table-panel {
-  margin-top: 32px;
+  margin-top: 28px;
 }
 
 .table-panel h2 {
   margin-bottom: 16px;
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .table-wrap {
-  max-height: 420px;
+  max-height: 520px;
   overflow: auto;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.08);
 }
 
+.compact-wrap {
+  max-height: 320px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 th {
@@ -113,83 +238,48 @@ td {
 tr:hover td {
   background: rgba(255,255,255,0.04);
 }
-.analyze-button {
-  margin-left: 12px;
-  padding: 16px 28px;
-  border: 0;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.08);
-  color: white;
-  font-weight: 700;
-  cursor: pointer;
-}
 
-.analyze-button:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.analyze-button:not(:disabled):hover {
-  background: rgba(255,255,255,0.14);
-}
-
-#analysisPanel {
-  margin-top: 28px;
-}
-
-.analysis-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
-
-.metric-card {
+.empty-message {
   padding: 18px;
   border-radius: 16px;
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.78);
 }
 
-.metric-label {
-  opacity: 0.65;
-  font-size: 13px;
-  margin-bottom: 8px;
+@media (max-width: 860px) {
+  .upload-card {
+    padding: 24px;
+  }
+
+  .analysis-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hero-row {
+    flex-direction: column;
+  }
 }
 
-.metric-value {
-  font-size: 28px;
-  font-weight: 800;
-}
 
-.analysis-table {
-  margin-top: 22px;
-}
-.filters-panel {
-  margin-top: 24px;
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.filter-control {
-  padding: 13px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.08);
-  color: white;
-  outline: none;
-}
-
-.filter-check {
+.threshold-control {
+  min-height: 46px;
   display: inline-flex;
   gap: 8px;
   align-items: center;
   padding: 13px 16px;
   border-radius: 12px;
   background: rgba(255,255,255,0.08);
-  cursor: pointer;
+  color: rgba(255,255,255,0.88);
+  white-space: nowrap;
 }
-.search-control {
-  min-width: 280px;
+
+.threshold-control input {
+  width: 84px;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.24);
+  color: white;
+  outline: none;
 }
