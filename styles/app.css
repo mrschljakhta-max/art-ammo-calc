@@ -744,3 +744,57 @@ tr.row-long:hover td {
     flex-direction: column;
   }
 }
+
+.compare-panel {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.compare-title {
+  font-size: 13px;
+  opacity: 0.78;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.comparison-result-panel {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 20px;
+  background: rgba(88, 101, 242, 0.08);
+  border: 1px solid rgba(88, 101, 242, 0.22);
+  box-shadow: 0 0 24px rgba(88, 101, 242, 0.08);
+}
+
+.comparison-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+
+.comparison-header h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.comparison-header span {
+  opacity: 0.72;
+  font-size: 13px;
+}
+
+.comparison-notes {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  opacity: 0.86;
+}
