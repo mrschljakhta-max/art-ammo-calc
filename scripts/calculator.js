@@ -21,8 +21,8 @@ const appVersion = document.getElementById("appVersion");
 function getAppMeta() {
   return window.ART_AMMO_APP_META || {
     appName: "Art Ammo",
-    version: "0.24",
-    buildLabel: "v24-data-quality",
+    version: "0.25",
+    buildLabel: "v25-auto-dictionaries",
     buildDate: "2026-05-07",
     logicProfile: "Excel локально + аналітика залишків + журнал дій"
   };
@@ -1446,6 +1446,186 @@ function renderDataQualityPanel(report) {
   `;
 }
 
+
+function buildAutoDictionaries(items) {
+  const source = items || [];
+  const unitsMap = new Map();
+  const projectilesMap = new Map();
+  const chargesMap = new Map();
+  const combinationsMap = new Map();
+
+  source.forEach(item => {
+    const unitKey = cleanCell(item.unit || "");
+    const projectileKey = cleanCell(item.projectile || "");
+    const chargeKey = cleanCell(item.charge || "");
+    const combinationKey = `${projectileKey} + ${chargeKey}`;
+
+    if (unitKey && !unitsMap.has(unitKey)) {
+      unitsMap.set(unitKey, {
+        name: unitKey,
+        rows: 0,
+        totalBalance: 0,
+        longRangeBalance: 0
+      });
+    }
+
+    if (projectileKey && !projectilesMap.has(projectileKey)) {
+      projectilesMap.set(projectileKey, {
+        name: projectileKey,
+        rows: 0,
+        totalBalance: 0
+      });
+    }
+
+    if (chargeKey && !chargesMap.has(chargeKey)) {
+      chargesMap.set(chargeKey, {
+        name: chargeKey,
+        rows: 0,
+        totalBalance: 0
+      });
+    }
+
+    if (projectileKey && chargeKey && !combinationsMap.has(combinationKey)) {
+      combinationsMap.set(combinationKey, {
+        projectile: projectileKey,
+        charge: chargeKey,
+        combination: combinationKey,
+        rows: 0,
+        totalBalance: 0,
+        maxRangeKm: 0,
+        longRange: false,
+        units: new Set()
+      });
+    }
+
+    const balance = Number(item.balance || 0);
+
+    if (unitsMap.has(unitKey)) {
+      const unit = unitsMap.get(unitKey);
+      unit.rows += 1;
+      unit.totalBalance += balance;
+      if (item.longRange) unit.longRangeBalance += balance;
+    }
+
+    if (projectilesMap.has(projectileKey)) {
+      const projectile = projectilesMap.get(projectileKey);
+      projectile.rows += 1;
+      projectile.totalBalance += balance;
+    }
+
+    if (chargesMap.has(chargeKey)) {
+      const charge = chargesMap.get(chargeKey);
+      charge.rows += 1;
+      charge.totalBalance += balance;
+    }
+
+    if (combinationsMap.has(combinationKey)) {
+      const combination = combinationsMap.get(combinationKey);
+      combination.rows += 1;
+      combination.totalBalance += balance;
+      combination.maxRangeKm = Math.max(combination.maxRangeKm, Number(item.rangeKm || 0));
+      combination.longRange = combination.longRange || Boolean(item.longRange);
+      combination.units.add(unitKey);
+    }
+  });
+
+  const sortByName = (a, b) => String(a.name || a.combination).localeCompare(String(b.name || b.combination), "uk");
+
+  return {
+    units: Array.from(unitsMap.values()).sort(sortByName),
+    projectiles: Array.from(projectilesMap.values()).sort(sortByName),
+    charges: Array.from(chargesMap.values()).sort(sortByName),
+    combinations: Array.from(combinationsMap.values()).map(item => ({
+      ...item,
+      unitsCount: item.units.size,
+      units: Array.from(item.units).filter(Boolean).sort().join(", ")
+    })).sort((a, b) => a.combination.localeCompare(b.combination, "uk"))
+  };
+}
+
+function renderAutoDictionariesPanel(dicts) {
+  if (!dicts) return "";
+
+  const topCombinations = [...dicts.combinations]
+    .sort((a, b) => Number(b.totalBalance || 0) - Number(a.totalBalance || 0))
+    .slice(0, 12);
+
+  return `
+    <div class="dictionary-panel">
+      <div class="dictionary-header">
+        <div>
+          <h2>Автодовідники з Excel</h2>
+          <p>Система автоматично сформувала довідники з поточного файлу. Це база для майбутнього ручного довідника верхнього рівня.</p>
+        </div>
+        <div class="dictionary-metrics">
+          <span>Підрозділів: <b>${dicts.units.length}</b></span>
+          <span>Снарядів: <b>${dicts.projectiles.length}</b></span>
+          <span>Зарядів: <b>${dicts.charges.length}</b></span>
+          <span>Комбінацій: <b>${dicts.combinations.length}</b></span>
+        </div>
+      </div>
+
+      <div class="dictionary-grid">
+        <div class="dictionary-card">
+          <div class="dictionary-title">Підрозділи</div>
+          ${renderDictionaryList(dicts.units.map(item => `${item.name} — залишок ${item.totalBalance}`), "Підрозділів не знайдено")}
+        </div>
+        <div class="dictionary-card">
+          <div class="dictionary-title">Снаряди</div>
+          ${renderDictionaryList(dicts.projectiles.map(item => `${item.name} — ${item.rows} ряд.`), "Снарядів не знайдено")}
+        </div>
+        <div class="dictionary-card">
+          <div class="dictionary-title">Заряди</div>
+          ${renderDictionaryList(dicts.charges.map(item => `${item.name} — ${item.rows} ряд.`), "Зарядів не знайдено")}
+        </div>
+      </div>
+
+      <div class="table-panel analysis-table dictionary-table-panel">
+        <h2>ТОП комбінацій з автодовідника</h2>
+        <div class="table-wrap compact-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Снаряд</th>
+                <th>Заряд</th>
+                <th>Макс. дальність, км</th>
+                <th>Далекобійна</th>
+                <th>Підрозділів</th>
+                <th>Залишок</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${topCombinations.map(item => `
+                <tr>
+                  <td>${escapeHtml(item.projectile)}</td>
+                  <td>${escapeHtml(item.charge)}</td>
+                  <td>${item.maxRangeKm ? item.maxRangeKm.toFixed(1) : ""}</td>
+                  <td>${item.longRange ? "Так" : "Ні"}</td>
+                  <td>${item.unitsCount}</td>
+                  <td>${item.totalBalance}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDictionaryList(values, emptyText) {
+  if (!values || !values.length) {
+    return `<div class="dictionary-empty">${escapeHtml(emptyText)}</div>`;
+  }
+
+  return `
+    <ul class="dictionary-list">
+      ${values.slice(0, 18).map(value => `<li>${escapeHtml(value)}</li>`).join("")}
+      ${values.length > 18 ? `<li class="dictionary-more">+${values.length - 18} ще</li>` : ""}
+    </ul>
+  `;
+}
+
 function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   if (!allItems.length) {
     analysisPanel.innerHTML = `
@@ -1484,8 +1664,10 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   const exchangeActionPlan = getFilteredExchangeActionPlan(exchangeRecommendations);
   const actionStatusIntegrity = getActionStatusIntegrity(exchangeActionPlan);
   const dataQuality = getDataQualityReport(unitItems, summaryItems, grouped);
+  const autoDictionaries = buildAutoDictionaries(window.ArtAmmoState?.unitItems || unitItems);
 
   window.ArtAmmoState.dataQuality = dataQuality;
+  window.ArtAmmoState.autoDictionaries = autoDictionaries;
 
   let html = `
     <div class="analysis-grid">
@@ -1555,6 +1737,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
 
     ${renderReportPassport(reportPassport)}
     ${renderDataQualityPanel(dataQuality)}
+    ${renderAutoDictionariesPanel(autoDictionaries)}
     ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
     ${renderExchangeRecommendations(exchangeRecommendations)}
     ${renderExchangeImpact(exchangeRecommendations)}
