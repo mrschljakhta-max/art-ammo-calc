@@ -830,3 +830,73 @@ tr.row-long:hover td {
   opacity: 0.62;
   font-size: 12px;
 }
+
+.exchange-impact-panel {
+  margin-top: 18px;
+  padding: 22px;
+  border-radius: 20px;
+  background: rgba(52, 211, 153, 0.075);
+  border: 1px solid rgba(52, 211, 153, 0.18);
+  box-shadow: 0 0 24px rgba(52, 211, 153, 0.06);
+}
+
+.exchange-impact-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.exchange-impact-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.exchange-impact-header span {
+  opacity: 0.68;
+  font-size: 13px;
+  text-align: right;
+}
+
+.exchange-impact-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.exchange-impact-card {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.impact-label {
+  font-size: 12px;
+  opacity: 0.68;
+  margin-bottom: 8px;
+}
+
+.impact-value {
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.impact-warning {
+  background: rgba(245, 158, 11, 0.11);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.exchange-impact-note {
+  margin-top: 14px;
+  font-size: 13px;
+  opacity: 0.72;
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  .exchange-impact-grid {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+}
