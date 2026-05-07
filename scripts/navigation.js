@@ -107,7 +107,7 @@
 
     return {
       app: "BASTION",
-      version: "v0.38",
+      version: "v0.39",
       generatedAt: now.toISOString(),
       sourceFileName: state.sourceFileName || "unknown",
       filters: getReportFilterLabel(),
@@ -334,6 +334,132 @@
     return new Set(items.map(item => item[field]).filter(Boolean)).size;
   }
 
+
+
+  function normalizeQualityIssue(raw, index) {
+    if (!raw || typeof raw !== "object") {
+      return { type: "unknown", severity: "warn", title: String(raw || "Проблема"), unit: "—", row: "—" };
+    }
+
+    const type = raw.type || raw.code || raw.kind || raw.category || "unknown";
+    const severity = raw.severity || raw.level || (String(type).includes("negative") ? "error" : "warn");
+    const title = raw.title || raw.message || raw.text || qualityTypeLabel(type);
+    const unit = raw.unit || raw.sheetName || raw.sheet || raw.підрозділ || "—";
+    const row = raw.row || raw.rowIndex || raw.line || "—";
+
+    return { ...raw, type, severity, title, unit, row, index };
+  }
+
+  function qualityTypeLabel(type) {
+    const value = String(type || "").toLowerCase();
+    if (value.includes("negative")) return "Від’ємне значення";
+    if (value.includes("duplicate")) return "Дубль позиції";
+    if (value.includes("range")) return "Відсутня або нульова дальність";
+    if (value.includes("formula") || value.includes("balance")) return "Порушення формули залишку";
+    if (value.includes("summary") || value.includes("reconcile")) return "Розбіжність зі зведеним аркушем";
+    return "Проблема якості";
+  }
+
+  function buildFallbackQualityIssues(items, threshold) {
+    const issues = [];
+    const duplicateMap = new Map();
+
+    items.forEach(item => {
+      const balance = asNumber(item.balance);
+      const received = asNumber(item.received);
+      const spent = asNumber(item.spent);
+      const range = asNumber(item.rangeMeters);
+      const key = `${item.unit}||${item.combination}`;
+
+      duplicateMap.set(key, (duplicateMap.get(key) || 0) + 1);
+
+      if (range <= 0) {
+        issues.push({ type: "missing_range", severity: "warn", title: "Відсутня або нульова дальність", unit: item.unit, row: item.row, projectile: item.projectile, charge: item.charge });
+      }
+      if (balance < 0 || received < 0 || spent < 0) {
+        issues.push({ type: "negative_value", severity: "error", title: "Від’ємне числове значення", unit: item.unit, row: item.row, projectile: item.projectile, charge: item.charge });
+      }
+      if ((received || spent || balance) && Math.abs((received - spent) - balance) > 0.0001) {
+        issues.push({ type: "balance_formula", severity: "warn", title: "Отримання - витрата ≠ залишок", unit: item.unit, row: item.row, projectile: item.projectile, charge: item.charge });
+      }
+    });
+
+    duplicateMap.forEach((count, key) => {
+      if (count <= 1) return;
+      const [unit, combination] = key.split("||");
+      issues.push({ type: "duplicate", severity: "warn", title: `Дубль позиції: ${combination}`, unit, row: "—" });
+    });
+
+    return issues;
+  }
+
+  function getQualityIssues(items, threshold) {
+    const state = window.ArtAmmoState || {};
+    const existing = Array.isArray(state.dataQualityIssues)
+      ? state.dataQualityIssues
+      : Array.isArray(state.qualityIssues)
+        ? state.qualityIssues
+        : [];
+
+    const base = existing.length ? existing : buildFallbackQualityIssues(items, threshold);
+    return base.map(normalizeQualityIssue);
+  }
+
+  function renderQualityCenter(items, grouped, threshold) {
+    const issues = getQualityIssues(items, threshold);
+    const summaryItems = Array.isArray(window.ArtAmmoState?.summaryItems) ? window.ArtAmmoState.summaryItems : [];
+    const unitTotal = items.reduce((sum, item) => sum + asNumber(item.balance), 0);
+    const summaryTotal = summaryItems.reduce((sum, item) => sum + asNumber(item.balance), 0);
+    const diff = unitTotal - summaryTotal;
+
+    const byType = issues.reduce((acc, issue) => {
+      const label = qualityTypeLabel(issue.type);
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {});
+
+    const errorCount = issues.filter(issue => String(issue.severity).toLowerCase().includes("error")).length;
+    const warnCount = Math.max(0, issues.length - errorCount);
+
+    setText("qualityTotalBadge", issues.length ? `${formatNumber(issues.length)} проблем` : "стабільно");
+    setText("qualityIssueCount", issues.length ? `${formatNumber(issues.length)} записів` : "немає проблем");
+    setText("qualityReconcileBadge", summaryItems.length ? (diff === 0 ? "сходиться" : `Δ ${formatNumber(diff)}`) : "немає зведеного");
+
+    setHTML("qualityBreakdownList", issues.length ? Object.entries(byType).map(([label, count]) => `
+      <div class="quality-break-row">
+        <span>${label}</span>
+        <strong>${formatNumber(count)}</strong>
+      </div>
+    `).join("") + `
+      <div class="quality-break-row quality-total">
+        <span>Помилки / попередження</span>
+        <strong>${formatNumber(errorCount)} / ${formatNumber(warnCount)}</strong>
+      </div>
+    ` : `<div class="alert-item green">Критичних проблем якості не виявлено.</div>`);
+
+    setHTML("qualityReconcileList", items.length ? `
+      <div class="quality-break-row"><span>Залишок по підрозділах</span><strong>${formatNumber(unitTotal)}</strong></div>
+      <div class="quality-break-row"><span>Зведений аркуш</span><strong>${summaryItems.length ? formatNumber(summaryTotal) : "—"}</strong></div>
+      <div class="quality-break-row ${diff === 0 ? "ok" : "warn"}"><span>Різниця</span><strong>${summaryItems.length ? formatNumber(diff) : "немає даних"}</strong></div>
+    ` : `<div class="alert-item muted">Завантаж Excel-файл для контрольної звірки.</div>`);
+
+    setHTML("qualityIssueTable", issues.length ? `
+      <div class="quality-table-head">
+        <span>Тип</span><span>Рівень</span><span>Підрозділ</span><span>Рядок</span><span>Опис</span>
+      </div>
+      ${issues.slice(0, 80).map(issue => `
+        <div class="quality-table-row ${String(issue.severity).toLowerCase().includes("error") ? "is-error" : "is-warn"}">
+          <span>${qualityTypeLabel(issue.type)}</span>
+          <span>${issue.severity}</span>
+          <span>${issue.unit}</span>
+          <span>${issue.row}</span>
+          <span>${issue.title}</span>
+        </div>
+      `).join("")}
+      ${issues.length > 80 ? `<div class="alert-item muted">Показано перші 80 проблем із ${formatNumber(issues.length)}.</div>` : ""}
+    ` : `<div class="alert-item green">Журнал проблем якості порожній.</div>`);
+  }
+
   function updateModePreviews(data) {
     const { items, grouped, threshold, critical, exchangeCount, qualityIssues } = data;
     const longRangeActions = Array.isArray(window.ArtAmmoState?.actionLog)
@@ -362,7 +488,10 @@
     setHTML("qualityLiveList", items.length ? `
       <div class="mode-live-row"><span>Проблем якості</span><strong>${formatNumber(qualityIssues)}</strong></div>
       <div class="mode-live-row"><span>Малі/нульові залишки</span><strong>${formatNumber(critical)}</strong></div>
+      <div class="mode-live-row"><span>Поріг контролю</span><strong>≤ ${threshold}</strong></div>
     ` : `<div class="alert-item muted">Після аналізу система покаже помилки й попередження файлу.</div>`);
+
+    renderQualityCenter(items, grouped, threshold);
 
     setText("reportsPackagePreview", items.length ? "можна формувати" : "—");
     setText("reportsRowsCount", items.length ? pluralRows(items.length) : "—");
