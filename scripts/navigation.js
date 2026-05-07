@@ -19,6 +19,10 @@
     document.querySelectorAll("[data-view]").forEach((button) => {
       button.classList.toggle("is-active", button.dataset.view === view);
     });
+
+    document.querySelectorAll("[data-view-panel]").forEach((panel) => {
+      panel.classList.toggle("is-active", panel.dataset.viewPanel === view);
+    });
   }
 
   document.querySelectorAll("[data-view]").forEach((button) => {
@@ -30,6 +34,7 @@
     excelInput.addEventListener("change", (event) => {
       const file = event.target.files?.[0];
       fileState.textContent = file ? file.name : "очікується";
+      if (file) activateView("analytics");
     });
   }
 })();
