@@ -1201,6 +1201,7 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
 
     ${renderReportPassport(reportPassport)}
     ${renderComparisonPanel(window.ArtAmmoState?.unitItems || unitItems)}
+    ${renderExchangeRecommendations(getExchangeRecommendations(window.ArtAmmoState?.unitItems || unitItems, getLowBalanceThreshold(), 12))}
     ${renderRecommendations(recommendations)}
     ${renderCommanderSummary(commanderSummary)}
   `;
@@ -1430,6 +1431,138 @@ function renderAnalysis(allItems, unitItems, summaryItems, grouped) {
   `;
 
   analysisPanel.innerHTML = html;
+}
+
+
+function getExchangeRecommendations(items, threshold = 10, limit = 12) {
+  const activeItems = [...(items || [])];
+  const byCombination = {};
+
+  activeItems.forEach(item => {
+    const key = item.combination || `${item.projectile} + ${item.charge}`;
+
+    if (!byCombination[key]) {
+      byCombination[key] = {
+        key,
+        projectile: item.projectile,
+        charge: item.charge,
+        rangeKm: item.rangeKm,
+        longRange: item.longRange,
+        units: []
+      };
+    }
+
+    byCombination[key].units.push({
+      unit: item.unit,
+      balance: Number(item.balance || 0),
+      item
+    });
+  });
+
+  const recommendations = [];
+
+  Object.values(byCombination).forEach(group => {
+    const receivers = group.units
+      .filter(row => row.balance >= 0 && row.balance <= threshold)
+      .sort((a, b) => a.balance - b.balance || String(a.unit).localeCompare(String(b.unit), "uk"));
+
+    const donors = group.units
+      .filter(row => row.balance > threshold)
+      .sort((a, b) => b.balance - a.balance || String(a.unit).localeCompare(String(b.unit), "uk"));
+
+    receivers.forEach(receiver => {
+      if (!donors.length) return;
+
+      const donor = donors[0];
+      if (!donor || donor.unit === receiver.unit) return;
+
+      const targetLevel = threshold + 1;
+      const receiverNeed = Math.max(1, targetLevel - receiver.balance);
+      const donorSurplus = Math.max(0, donor.balance - threshold);
+      const recommendedQty = Math.min(receiverNeed, donorSurplus);
+
+      if (recommendedQty <= 0) return;
+
+      recommendations.push({
+        priority: group.longRange ? 1 : 2,
+        type: receiver.balance === 0 ? "Нуль" : "Мало",
+        projectile: group.projectile,
+        charge: group.charge,
+        combination: group.key,
+        rangeKm: group.rangeKm,
+        longRange: group.longRange,
+        fromUnit: donor.unit,
+        toUnit: receiver.unit,
+        donorBalance: donor.balance,
+        receiverBalance: receiver.balance,
+        recommendedQty,
+        expectedReceiverBalance: receiver.balance + recommendedQty,
+        reason: receiver.balance === 0
+          ? "закриття нульового залишку"
+          : "підняття малого залишку вище порогу"
+      });
+    });
+  });
+
+  return recommendations
+    .sort((a, b) =>
+      a.priority - b.priority ||
+      a.receiverBalance - b.receiverBalance ||
+      b.recommendedQty - a.recommendedQty ||
+      Number(b.rangeKm || 0) - Number(a.rangeKm || 0)
+    )
+    .slice(0, limit);
+}
+
+function renderExchangeRecommendations(recommendations) {
+  if (!recommendations || !recommendations.length) {
+    return `
+      <div class="exchange-panel">
+        <div class="exchange-header">
+          <h2>Рекомендації щодо обміну</h2>
+          <span>Потенційних обмінів за поточними даними не знайдено</span>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="exchange-panel">
+      <div class="exchange-header">
+        <h2>Рекомендації щодо обміну</h2>
+        <span>Пошук однакових комбінацій: де дефіцит в одному підрозділі і надлишок в іншому</span>
+      </div>
+
+      <div class="table-wrap compact-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Пріоритет</th>
+              <th>Комбінація</th>
+              <th>Дальність</th>
+              <th>Передати з</th>
+              <th>Передати до</th>
+              <th>Рекомендовано</th>
+              <th>Пояснення</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recommendations.map(item => `
+              <tr class="${item.longRange ? "row-long" : "row-normal"}">
+                <td><span class="status-badge ${item.type === "Нуль" ? "status-zero" : "status-low"}">${item.type}</span></td>
+                <td>${escapeHtml(item.projectile)} (${escapeHtml(item.charge)})</td>
+                <td>${item.rangeKm ? item.rangeKm.toFixed(1) + " км" : ""}</td>
+                <td>${escapeHtml(item.fromUnit)} <span class="exchange-muted">(${item.donorBalance})</span></td>
+                <td>${escapeHtml(item.toUnit)} <span class="exchange-muted">(${item.receiverBalance})</span></td>
+                <td><strong>${item.recommendedQty}</strong></td>
+                <td>${escapeHtml(item.reason)} → очікувано ${item.expectedReceiverBalance}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
 }
 
 function getRowClass(item) {

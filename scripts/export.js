@@ -46,6 +46,30 @@
       XLSX.utils.book_append_sheet(workbook, commanderSheet, "Командирський висновок");
     }
 
+    const exchangeRecommendations = typeof getExchangeRecommendations === "function"
+      ? getExchangeRecommendations(window.ArtAmmoState?.unitItems || items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10, 50)
+      : [];
+
+    if (exchangeRecommendations.length) {
+      const exchangeRows = exchangeRecommendations.map(item => ({
+        "Пріоритет": item.type,
+        "Снаряд": item.projectile,
+        "Заряд": item.charge,
+        "Дальність, км": item.rangeKm ? item.rangeKm.toFixed(1) : "",
+        "Далекобійна": item.longRange ? "Так" : "Ні",
+        "Передати з": item.fromUnit,
+        "Залишок донора": item.donorBalance,
+        "Передати до": item.toUnit,
+        "Залишок отримувача": item.receiverBalance,
+        "Рекомендовано передати": item.recommendedQty,
+        "Очікуваний залишок отримувача": item.expectedReceiverBalance,
+        "Пояснення": item.reason
+      }));
+
+      const exchangeSheet = XLSX.utils.json_to_sheet(exchangeRows);
+      XLSX.utils.book_append_sheet(workbook, exchangeSheet, "Рекомендації обміну");
+    }
+
     const summaryRows = Object.values(grouped).map(unit => ({
       "Підрозділ": unit.unit,
       "Комбінацій": unit.combinations.size,

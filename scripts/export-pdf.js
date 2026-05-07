@@ -94,6 +94,44 @@
       );
     }
 
+    const exchangeRecommendations = typeof getExchangeRecommendations === "function"
+      ? getExchangeRecommendations(window.ArtAmmoState?.unitItems || items, typeof getLowBalanceThreshold === "function" ? getLowBalanceThreshold() : 10, 20)
+      : [];
+
+    if (exchangeRecommendations.length) {
+      content.push(
+        { text: "Рекомендації щодо обміну", style: "section" },
+        {
+          table: {
+            headerRows: 1,
+            widths: ["auto", "*", "auto", "*", "*", "auto", "*"],
+            body: [
+              [
+                { text: "Пріоритет", bold: true },
+                { text: "Комбінація", bold: true },
+                { text: "Дальність", bold: true },
+                { text: "Передати з", bold: true },
+                { text: "Передати до", bold: true },
+                { text: "К-сть", bold: true },
+                { text: "Пояснення", bold: true }
+              ],
+              ...exchangeRecommendations.map(item => [
+                item.type,
+                `${item.projectile} (${item.charge})`,
+                item.rangeKm ? item.rangeKm.toFixed(1) : "",
+                `${item.fromUnit} (${item.donorBalance})`,
+                `${item.toUnit} (${item.receiverBalance})`,
+                String(item.recommendedQty),
+                `${item.reason}; очікувано ${item.expectedReceiverBalance}`
+              ])
+            ]
+          },
+          layout: "lightHorizontalLines",
+          margin: [0, 0, 0, 18]
+        }
+      );
+    }
+
     const unitSummaryBody = [
       [
         { text: "Підрозділ", bold: true },
